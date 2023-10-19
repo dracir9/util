@@ -100,7 +100,7 @@ function ButtonName=buttondlg(Question,Title,Btn1,Btn2,Btn3,Default)
 %
 %  See also DIALOG, ERRORDLG, HELPDLG, INPUTDLG, LISTDLG,
 %    MSGBOX, WARNDLG, FIGURE, TEXTWRAP, UIWAIT, UIRESUME.
-%  Copyright 1984-2011 The MathWorks, Inc.
+%  Copyright 1984-2023 The MathWorks, Inc.
 if nargin<1
     error('Too few arguments for BUTTONDLG');           % <-- Modified
 end
