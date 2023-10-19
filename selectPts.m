@@ -3,7 +3,6 @@ function [out, hgfx] = selectPts(ax, type, varargin)
 %
 %   USAGE
 %       points = selectPts(ax, type)
-%       points = selectPts(ax, 'area', color)
 %       points = selectPts(___, Name, Value)
 %       [points, hgfx] = selectPts(___)
 %
@@ -18,10 +17,6 @@ function [out, hgfx] = selectPts(ax, type, varargin)
 %                 axes object if created
 %       type    - Type of selection entered as a character array. The
 %                 available options are: <point,line, polyline, area, pose>
-%       color   - If selection type is 'area' specifies the color of the
-%                 selected area. This parameter is only available when
-%                 selection type is 'area'. If no name-value pairs are
-%                 entered it can be omitted.
 %
 %   OUTPUT PARAMETERS
 %       points  - 2-by-n matrix containing the X and Y coordinates of the
@@ -73,6 +68,7 @@ function [out, hgfx] = selectPts(ax, type, varargin)
 
     % State structure
     gui.numPts = 0;
+    gui.idx = opts.insertID;
 
     % Set callbacks
     gui.fig.WindowButtonDownFcn = @mouseBtnDwn;
@@ -134,7 +130,9 @@ function [out, hgfx] = selectPts(ax, type, varargin)
             uiresume;
         elseif gui.numPts >= opts.minMaxPoints(2)
             % Entered maximum number of points
-            out = [gui.hgfx.XData(1:end-1)' gui.hgfx.YData(1:end-1)'];
+            xp = [gui.hgfx.XData(1:gui.idx-1) gui.hgfx.XData(gui.idx+1:end)];
+            yp = [gui.hgfx.YData(1:gui.idx-1) gui.hgfx.YData(gui.idx+1:end)];
+            out = [xp' yp'];
             uiresume; % Return from main function
         end
     end
@@ -144,8 +142,8 @@ function [out, hgfx] = selectPts(ax, type, varargin)
         cp = gui.ax.CurrentPoint;
         xp = cp(1,1);
         yp = cp(1,2);
-        gui.hgfx.XData(end) = xp;
-        gui.hgfx.YData(end) = yp;
+        gui.hgfx.XData(gui.idx) = xp;
+        gui.hgfx.YData(gui.idx) = yp;
         drawnow limitrate
     end
 
@@ -174,7 +172,7 @@ function [out, hgfx] = selectPts(ax, type, varargin)
                 out = [];
             else
                 out = [gui.hgfx.XData(:), gui.hgfx.YData(:)];
-                out(end,:) = []; % Romove last row
+                out(gui.idx,:) = []; % Romove last edit point
             end
             uiresume; % Return from main function
         end
@@ -191,13 +189,24 @@ function [out, hgfx] = selectPts(ax, type, varargin)
                 if isfield(gui, 'hgfx')
                     gui.numPts = gui.numPts+1;
                     % Set point and create new one
-                    gui.hgfx.XData(end:end+1) = [xp xp];
-                    gui.hgfx.YData(end:end+1) = [yp yp];
+                    gui.hgfx.XData = [gui.hgfx.XData(1:gui.idx-1), xp, xp, gui.hgfx.XData(gui.idx+1:end)];
+                    gui.hgfx.YData = [gui.hgfx.YData(1:gui.idx-1), yp, yp, gui.hgfx.YData(gui.idx+1:end)];
+                    gui.idx = gui.idx+1;
                 else
                     % First point
                     gui.numPts = numel(xp);
+
                     title(gui.ax, 'Left click to place points, right click to end')
-                    gui.hgfx = line([xp(:); xp(end)],[yp(:); yp(end)], 'Parent', gui.ax, opts.args{:});
+
+                    if gui.idx == -1
+                        gui.idx = gui.numPts;
+                        gui.hgfx = line([xp(1:gui.idx); xp(gui.idx:end)], ...
+                        [yp(1:gui.idx); yp(gui.idx:end)], 'Parent', gui.ax, opts.args{:});
+                        gui.idx = gui.idx+1;
+                    else
+                        gui.hgfx = line([xp(1:gui.idx); xp(gui.idx:end)], ...
+                            [yp(1:gui.idx); yp(gui.idx:end)], 'Parent', gui.ax, opts.args{:});
+                    end
         
                     gui.fig.WindowButtonMotionFcn = @mouseUpdtLine;
                 end
@@ -219,6 +228,7 @@ function [out, hgfx] = selectPts(ax, type, varargin)
                     d = opts.length;
                     gui.hgfx(1) = line(xp + r.*cos(k), yp + r.*sin(k), 'Parent', gui.ax, opts.args{:});
                     gui.hgfx(2) = line([xp+r xp+d], [yp yp], 'Parent', gui.ax, opts.args{:});
+                    gui.hgfx(2).Color = gui.hgfx(1).Color;
 
                     title(gui.ax, 'Left click to select orientation, right click to cancel')
 
@@ -233,13 +243,24 @@ function [out, hgfx] = selectPts(ax, type, varargin)
                 if isfield(gui, 'hgfx')
                     gui.numPts = gui.numPts+1;
                     % Set point and create new one
-                    gui.hgfx.XData(end:end+1) = [xp xp];
-                    gui.hgfx.YData(end:end+1) = [yp yp];
+                    gui.hgfx.XData = [gui.hgfx.XData(1:gui.idx-1), xp, xp, gui.hgfx.XData(gui.idx+1:end)];
+                    gui.hgfx.YData = [gui.hgfx.YData(1:gui.idx-1), yp, yp, gui.hgfx.YData(gui.idx+1:end)];
+                    gui.idx = gui.idx+1;
                 else
                     % First point
                     gui.numPts = numel(xp);
+
                     title(gui.ax, 'Left click to place points, right click to end')
-                    gui.hgfx = patch([xp(:); xp(end)], [yp(:); yp(end)], opts.color, 'Parent', gui.ax, opts.args{:});
+
+                    if gui.idx == -1
+                        gui.idx = gui.numPts;
+                        gui.hgfx = patch([xp(1:gui.idx); xp(gui.idx:end)], ...
+                            [yp(1:gui.idx); yp(gui.idx:end)], 'r', 'Parent', gui.ax, opts.args{:});
+                        gui.idx = gui.idx+1;
+                    else
+                        gui.hgfx = patch([xp(1:gui.idx); xp(gui.idx:end)], ...
+                            [yp(1:gui.idx); yp(gui.idx:end)], 'r', 'Parent', gui.ax, opts.args{:});
+                    end
 
                     gui.fig.WindowButtonMotionFcn = @mouseUpdtLine;
                 end
@@ -254,6 +275,7 @@ function options = parseInput(type, args)
     options.args = {};
     options.defPtsX = [];
     options.defPtsY = [];
+    options.insertID = -1;
 
     % Check type
     switch lower(type)
@@ -264,27 +286,23 @@ function options = parseInput(type, args)
                 options.args = {'Marker', 'x'};
             end
         case {'line', 'angle'}
-            allowedOpts = {'Color', 'LineStyle', 'LineWidth', 'Marker', 'MarkerSize', 'MarkerEdgeColor', 'MarkerFaceColor', 'defaultPoints'};
+            allowedOpts = {'Color', 'LineStyle', 'LineWidth', 'Marker', 'MarkerSize', 'MarkerEdgeColor', 'MarkerFaceColor', 'DefaultPoints', 'InsertIndex'};
             options.minMaxPoints = [2 2];
         case 'polyline'
-            allowedOpts = {'Color', 'LineStyle', 'LineWidth', 'Marker', 'MarkerSize', 'MarkerEdgeColor', 'MarkerFaceColor', 'minMaxPoints', 'defaultPoints'};
+            allowedOpts = {'Color', 'LineStyle', 'LineWidth', 'Marker', 'MarkerSize', 'MarkerEdgeColor', 'MarkerFaceColor', 'minMaxPoints', 'DefaultPoints', 'InsertIndex'};
             options.minMaxPoints = [2 Inf];
         case 'pose'
-            allowedOpts = {'Color', 'LineStyle', 'LineWidth', 'Marker', 'MarkerSize', 'MarkerEdgeColor', 'MarkerFaceColor', 'defaultPoints'};
+            allowedOpts = {'Color', 'LineStyle', 'LineWidth', 'Marker', 'MarkerSize', 'MarkerEdgeColor', 'MarkerFaceColor', 'DefaultPoints', 'InsertIndex'};
             options.minMaxPoints = [2 2];
             options.radius = 0.27;
             options.length = 0.6;
         case 'area'
             allowedOpts = {'FaceColor', 'FaceAlpha', 'EdgeColor', 'EdgeAlpha',...
                 'LineStyle', 'LineWidth', 'Marker', 'MarkerSize', 'MarkerEdgeColor',...
-                'MarkerFaceColor', 'minMaxPoints', 'defaultPoints'};
+                'MarkerFaceColor', 'minMaxPoints', 'DefaultPoints', 'InsertIndex'};
             options.minMaxPoints = [3 Inf];
             if numel(args) < 1
-                options.color = 'r';
                 options.args = {'FaceAlpha', 0.2};
-            else
-                options.color = args{1};
-                args(1) = [];
             end
         otherwise
             error('Unrecognized type %s', type);
@@ -335,12 +353,21 @@ function options = parseInput(type, args)
                         options.defPtsX = value(:,1);
                         options.defPtsY = value(:,2);
                     end
+                case 'insertindex'
+                    if ~all(size(value) == [1 1])
+                        error('InserIndex must be a scalar')
+                    end
+                    options.insertID = value;
                 otherwise
                     options.args = [options.args, name, value];
             end
         end
     else
         error('Incorrect number of Name-Value pairs')
+    end
+
+    if isempty(options.defPtsX)
+        options.insertID = -1;
     end
 end
 
