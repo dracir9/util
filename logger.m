@@ -1,40 +1,39 @@
-classdef logging < handle
+classdef logger < handle
     %LOGGING Summary of this class goes here
     %   Detailed explanation goes here
     
     properties (Access = private)
-        loggers
+        handle
+    end
+
+    properties (SetAccess = private)
+        type
+    end
+
+    properties
+        level
+        format
     end
     
     methods
-        function obj = logging(handle)
-            %LOGGING Construct an instance of this class
-            %   Detailed explanation goes here
-
-            obj.loggers = util.logger();
-            obj.setgetLoggers(obj.loggers);
-        end
-
         function addOutput(obj, output)
+            logger = [];
             if isgraphics(output)
-                logger = util.logger('gfx', output, 'I');
+                logger = obj.createLogger('gfx', output, 'I');
             elseif ischar(output)
                 if strcmp(output, 'cmd')
-                    logger = util.logger('gfx', output, 'I');
+                    logger = obj.createLogger('cmd', [], 'I');
                 end
             end
 
             if ~isempty(logger)
-                obj.loggers(end+1) = logger;
+                obj.output(end+1) = logger;
             end
         end
 
         function outTxt = error(obj, varargin)
             txt = sprintf(varargin{:});
-            
-            for log = obj.loggers
-                log.print('E', txt);
-            end
+            obj.print('E', txt);
 
             if nargout > 0
                 outTxt = txt;
@@ -79,17 +78,31 @@ classdef logging < handle
 
         function delete(obj)
             disp('Bye')
-            for ii = 1:numel(obj.loggers)
-                if strcmp(obj.loggers(ii).type, 'file')
-                    fclose(obj.loggers(ii).ref);
+            for ii = 1:numel(obj.output)
+                if strcmp(obj.output(ii).type, 'file')
+                    fclose(obj.output(ii).ref);
                 end
             end
         end
     end
 
-    methods (Access = protected)
+    methods (Access = ?util.logging)
+        function obj = logger(type, hdle, level)
+            %LOGGING Construct an instance of this class
+            %   Detailed explanation goes here
+
+            if isempty(util.logging.level2Num(level))
+                error('Invalid logging level: %s\nAllowed values are ''E'', ''W'', ''I'', ''D'', ''T''', level);
+            end
+
+            obj.type = type;
+            obj.handle = hdle;
+            obj.level = level;
+            obj.format = '[%c]: %s';
+        end
+
         function print(obj, L, txt)
-            for out = obj.loggers
+            for out = obj.output
                 if obj.level2Num(L) <= obj.level2Num(out.level)
                     txtFormated = sprintf(out.format, L, txt);
                     switch out.type
@@ -106,14 +119,6 @@ classdef logging < handle
     end
 
     methods (Access = protected, Static)
-        function h = setgetLoggers(obj)
-            persistent logHandle;
-            if nargin
-                logHandle = obj;
-            end
-            h = logHandle;
-        end
-
         function logger = createLogger(T, R, L)
             if isempty(util.logging.level2Num(L))
                 error('Invalid logging level: %s\nAllowed values are ''E'', ''W'', ''I'', ''D'', ''T''', L);
