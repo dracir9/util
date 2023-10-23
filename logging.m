@@ -2,39 +2,71 @@ classdef logging < handle
     %LOGGING Summary of this class goes here
     %   Detailed explanation goes here
     
-    properties (Access = private)
+    properties (SetAccess = private)
         loggers
+    end
+
+    properties (Constant)
+        defaultFormat = '[%c]: %s';
+        defaultLevel = 'I';
     end
     
     methods
-        function obj = logging(handle)
+        function obj = logging()
             %LOGGING Construct an instance of this class
             %   Detailed explanation goes here
 
-            obj.loggers = util.logger();
+            obj.loggers = util.logger(0, 'cmd', [], 'I', '[%c]: %s');
             obj.setgetLoggers(obj.loggers);
         end
 
-        function addOutput(obj, output)
+        function outId = addOutput(obj, output, level, format)
+            if nargin < 4
+                format = obj.defaultFormat;
+            end
+            
+            if nargin < 3
+                level = obj.defaultLevel;
+            end
+
+            id = max([obj.loggers.id])+1;
+
             if isgraphics(output)
-                logger = util.logger('gfx', output, 'I');
+                logger = util.logger(id, 'gfx', output, level, format);
             elseif ischar(output)
                 if strcmp(output, 'cmd')
-                    logger = util.logger('gfx', output, 'I');
+                    cmdExists = false;
+                    for ii = 1:numel(obj.loggers)
+                        if strcmp(obj.loggers(ii).type, 'cmd')
+                            obj.loggers(ii) = util.logger(id, 'cmd', [], level, format);
+                            cmdExists = true;
+                        end
+                    end
+
+                    if ~cmdExists
+                        logger = util.logger(id, 'cmd', [], level, format);
+                    else
+                        logger = [];
+                    end
+                else
+                    logger = util.logger(id, 'file', output, level, format);
                 end
             end
 
             if ~isempty(logger)
                 obj.loggers(end+1) = logger;
             end
+            obj.setgetLoggers(obj.loggers);
+
+            if nargout > 0
+                outId = id;
+            end
         end
 
         function outTxt = error(obj, varargin)
             txt = sprintf(varargin{:});
             
-            for log = obj.loggers
-                log.print('E', txt);
-            end
+            obj.loggers.print('E', txt);
 
             if nargout > 0
                 outTxt = txt;
@@ -43,7 +75,8 @@ classdef logging < handle
 
         function outTxt = warning(obj, varargin)
             txt = sprintf(varargin{:});
-            obj.print('W', txt);
+            
+            obj.loggers.print('W', txt);
 
             if nargout > 0
                 outTxt = txt;
@@ -52,7 +85,8 @@ classdef logging < handle
 
         function outTxt = info(obj, varargin)
             txt = sprintf(varargin{:});
-            obj.print('I', txt);
+            
+            obj.loggers.print('I', txt);
 
             if nargout > 0
                 outTxt = txt;
@@ -61,7 +95,8 @@ classdef logging < handle
 
         function outTxt = debug(obj, varargin)
             txt = sprintf(varargin{:});
-            obj.print('D', txt);
+            
+            obj.loggers.print('D', txt);
 
             if nargout > 0
                 outTxt = txt;
@@ -70,7 +105,8 @@ classdef logging < handle
 
         function outTxt = trace(obj, varargin)
             txt = sprintf(varargin{:});
-            obj.print('T', txt);
+            
+            obj.loggers.print('T', txt);
 
             if nargout > 0
                 outTxt = txt;
@@ -78,52 +114,22 @@ classdef logging < handle
         end
 
         function delete(obj)
-            disp('Bye')
-            for ii = 1:numel(obj.loggers)
-                if strcmp(obj.loggers(ii).type, 'file')
-                    fclose(obj.loggers(ii).ref);
-                end
+            disp('Log disabled')
+            
+            logs = obj.setgetLoggers();
+            if numel(logs) == numel(obj.loggers) && all(obj.setgetLoggers() == obj.loggers)
+                obj.setgetLoggers([]);
             end
         end
     end
 
-    methods (Access = protected)
-        function print(obj, L, txt)
-            for out = obj.loggers
-                if obj.level2Num(L) <= obj.level2Num(out.level)
-                    txtFormated = sprintf(out.format, L, txt);
-                    switch out.type
-                        case 'cmd'
-                            disp(txtFormated);
-                        case 'file'
-                            fprintf(out.ref, txtFormated);
-                        case 'gfx'
-                            out.ref.String = txtFormated;
-                    end
-                end
-            end
-        end
-    end
-
-    methods (Access = protected, Static)
+    methods (Access = ?util.logger, Static)
         function h = setgetLoggers(obj)
             persistent logHandle;
             if nargin
                 logHandle = obj;
             end
             h = logHandle;
-        end
-
-        function logger = createLogger(T, R, L)
-            if isempty(util.logging.level2Num(L))
-                error('Invalid logging level: %s\nAllowed values are ''E'', ''W'', ''I'', ''D'', ''T''', L);
-            end
-
-            logger = struct('type', T, 'ref', R, 'level', L, 'format', '[%c]: %s');
-        end
-
-        function num = level2Num(level)
-            num = find(strcmp({'E', 'W', 'I', 'D', 'V', 'T'}, level), 1);
         end
     end
 end
