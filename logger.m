@@ -57,66 +57,67 @@ classdef logger < handle
             end
         end
     end
-    
-    % methods (Static)
-    %     function outTxt = error(obj, varargin)
-    %         txt = sprintf(varargin{:});
-    %         obj.print('E', txt);
-    % 
-    %         if nargout > 0
-    %             outTxt = txt;
-    %         end
-    %     end
-    % 
-    %     function outTxt = warning(obj, varargin)
-    %         txt = sprintf(varargin{:});
-    %         obj.print('W', txt);
-    % 
-    %         if nargout > 0
-    %             outTxt = txt;
-    %         end
-    %     end
-    % 
-    %     function outTxt = info(obj, varargin)
-    %         txt = sprintf(varargin{:});
-    %         obj.print('I', txt);
-    % 
-    %         if nargout > 0
-    %             outTxt = txt;
-    %         end
-    %     end
-    % 
-    %     function outTxt = debug(obj, varargin)
-    %         txt = sprintf(varargin{:});
-    %         obj.print('D', txt);
-    % 
-    %         if nargout > 0
-    %             outTxt = txt;
-    %         end
-    %     end
-    % 
-    %     function outTxt = trace(obj, varargin)
-    %         txt = sprintf(varargin{:});
-    %         obj.print('T', txt);
-    % 
-    %         if nargout > 0
-    %             outTxt = txt;
-    %         end
-    %     end
-    % 
-    %     function delete(obj)
-    %         disp('Bye')
-    %         for ii = 1:numel(obj.output)
-    %             if strcmp(obj.output(ii).type, 'file')
-    %                 fclose(obj.output(ii).ref);
-    %             end
-    %         end
-    %     end
-    % end
+
+    methods (Static)
+        function outTxt = error(obj, varargin)
+            txt = util.logger.print_('E', obj, varargin);
+
+            if nargout > 0
+                outTxt = txt;
+            end
+        end
+
+        function outTxt = warning(obj, varargin)
+            txt = util.logger.print_('W', obj, varargin);
+
+            if nargout > 0
+                outTxt = txt;
+            end
+        end
+
+        function outTxt = info(obj, varargin)
+            txt = util.logger.print_('I', obj, varargin);
+
+            if nargout > 0
+                outTxt = txt;
+            end
+        end
+
+        function outTxt = debug(obj, varargin)
+            txt = util.logger.print_('D', obj, varargin);
+
+            if nargout > 0
+                outTxt = txt;
+            end
+        end
+
+        function outTxt = trace(obj, varargin)
+            txt = util.logger.print_('T', obj, varargin);
+
+            if nargout > 0
+                outTxt = txt;
+            end
+        end
+    end
 
     methods (Access = protected, Static)
         function num = level2Num(level)
             num = find(strcmp({'E', 'W', 'I', 'D', 'V', 'T'}, level), 1);
+        end
+
+        function txt = print_(level, obj, varargin)
+            if isa(obj, 'util.logging')
+                txt = sprintf(varargin{:});
+                obj.loggers.print(level, txt);
+            else
+                txt = sprintf(obj, varargin{:});
+                loggers = util.logging.setgetLoggers();
+                if ~isempty(loggers)
+                    loggers.print(level, txt);
+                else
+                    fprintf('%c: %s\n', level, txt);
+                end
+            end
         end
     end
 end
