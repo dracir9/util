@@ -7,16 +7,33 @@ classdef logging < handle
     end
 
     properties (Constant)
-        defaultFormat = '[%c]: %s';
-        defaultLevel = 'I';
+        defaultFormat = '[%c]: %s\n';
+        defaultLevel = 'T';
     end
     
     methods
-        function obj = logging()
+        function obj = logging(varargin)
             %LOGGING Construct an instance of this class
             %   Detailed explanation goes here
-
-            obj.loggers = util.logger(0, 'cmd', [], 'I', '[%c]: %s');
+            if nargin == 0
+                obj.loggers = util.logger(0, 'cmd', [], obj.defaultLevel, obj.defaultFormat);
+            elseif nargin == 1
+                if isa(varargin{1}, 'util.logging')
+                    obj = varargin{1};
+                else
+                    if ischar(varargin{1}) || (util.getMatlabVersion() > 2016.5 && isstring(varargin{1}))
+                        if strcmp(varargin{1}, 'cmd')
+                            obj.loggers = util.logger(0, 'cmd', [], obj.defaultLevel, obj.defaultFormat);
+                        else
+                            obj.loggers = util.logger(0, 'file', varargin{1}, obj.defaultLevel, obj.defaultFormat);
+                        end
+                    else
+                        error(['Input must be a text containing the name of the output file,' ...
+                            ' for a file output, or the keyword ''cmd'' for command window output.'])
+                    end
+                end
+            end
+            
             obj.setgetLoggers(obj.loggers);
         end
 
@@ -29,26 +46,38 @@ classdef logging < handle
                 level = obj.defaultLevel;
             end
 
+            % Generate a new unique ID
             id = max([obj.loggers.id])+1;
 
             if isgraphics(output)
-                logger = util.logger(id, 'gfx', output, level, format);
+                if isfield(output, 'String')
+                    % Log to a graphic object with the field string
+                    logger = util.logger(id, 'gfx', output, level, format);
+                else
+                    error('Graphic objects of type %s cannot be used for logging', output.Type)
+                end
             elseif ischar(output)
                 if strcmp(output, 'cmd')
+                    % Log to command window
                     cmdExists = false;
                     for ii = 1:numel(obj.loggers)
                         if strcmp(obj.loggers(ii).type, 'cmd')
+                            % If there is a logger connected to the command
+                            % window, just update it
                             obj.loggers(ii) = util.logger(id, 'cmd', [], level, format);
                             cmdExists = true;
+                            break;
                         end
                     end
 
                     if ~cmdExists
                         logger = util.logger(id, 'cmd', [], level, format);
                     else
+                        % A logger to the command window already exists
                         logger = [];
                     end
                 else
+                    % Log to file
                     logger = util.logger(id, 'file', output, level, format);
                 end
             end
@@ -56,6 +85,7 @@ classdef logging < handle
             if ~isempty(logger)
                 obj.loggers(end+1) = logger;
             end
+            % Refresh the loggers static reference
             obj.setgetLoggers(obj.loggers);
 
             if nargout > 0
@@ -114,8 +144,6 @@ classdef logging < handle
         end
 
         function delete(obj)
-            disp('Log disabled')
-            
             logs = obj.setgetLoggers();
             if numel(logs) == numel(obj.loggers) && all(obj.setgetLoggers() == obj.loggers)
                 obj.setgetLoggers([]);

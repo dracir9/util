@@ -21,10 +21,27 @@ classdef logger < handle
             %LOGGING Construct an instance of this class
             %   Detailed explanation goes here
 
+            % Check inputs
             if isempty(util.logger.level2Num(level))
                 error('Invalid logging level: %s\nAllowed values are ''E'', ''W'', ''I'', ''D'', ''T''', level);
             end
 
+            switch type
+                case 'cmd'
+                    hdle = [];
+                case 'gfx'
+                    if ~isgraphics(hdle)
+                        error('Handle input must be a graphic object for type ''gfx''')
+                    elseif ~isfield(hdle, 'String')
+                        error('Unsupported graphic object. I must have a field named String')
+                    end
+                case 'file'
+                    hdle = fopen([hdle '.log'], 'a');
+                otherwise
+                    error('Invalid Logger type %s', type)
+            end
+
+            % Initialize properties
             obj.id = id;
             obj.type = type;
             obj.handle = hdle;
@@ -38,7 +55,7 @@ classdef logger < handle
                     txtFormated = sprintf(log.format, L, txt);
                     switch log.type
                         case 'cmd'
-                            disp(txtFormated);
+                            fprintf(txtFormated);
                         case 'file'
                             fprintf(log.handle, txtFormated);
                         case 'gfx'
@@ -51,7 +68,6 @@ classdef logger < handle
 
     methods
         function delete(obj)
-            disp('Delete logger')
             if strcmp(obj.type, 'file')
                 fclose(obj.handle);
             end
@@ -105,12 +121,12 @@ classdef logger < handle
             num = find(strcmp({'E', 'W', 'I', 'D', 'V', 'T'}, level), 1);
         end
 
-        function txt = print_(level, obj, varargin)
+        function txt = print_(level, obj, args)
             if isa(obj, 'util.logging')
-                txt = sprintf(varargin{:});
+                txt = sprintf(args{:});
                 obj.loggers.print(level, txt);
             else
-                txt = sprintf(obj, varargin{:});
+                txt = sprintf(obj, args{:});
                 loggers = util.logging.setgetLoggers();
                 if ~isempty(loggers)
                     loggers.print(level, txt);
