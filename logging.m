@@ -57,23 +57,12 @@ classdef logging < handle
             elseif ischar(output) || (util.getMatlabVersion() > 2016.5 && isstring(output))
                 if strcmp(output, 'cmd')
                     % Log to command window
-                    cmdExists = false;
-                    for ii = 1:numel(obj.loggers)
-                        if strcmp(obj.loggers(ii).type, 'cmd')
-                            % If there is a logger connected to the command
-                            % window, just update it
-                            obj.loggers(ii) = util.logger(id, 'cmd', [], level, format);
-                            cmdExists = true;
-                            break;
-                        end
-                    end
 
-                    if ~cmdExists
-                        logger = util.logger(id, 'cmd', [], level, format);
-                    else
-                        % A logger to the command window already exists
-                        logger = [];
-                    end
+                    % Delete logger to cmd if one exists
+                    obj.loggers(strcmp({obj.loggers.type}, 'cmd')) = [];
+
+                    % Create a new one
+                    logger = util.logger(id, 'cmd', [], level, format);
                 else
                     % Log to file
                     logger = util.logger(id, 'file', output, level, format);
@@ -83,10 +72,9 @@ classdef logging < handle
                     ' for a file output, or the keyword ''cmd'' for command window output.'])
             end
 
-            if ~isempty(logger)
-                % Add logger
-                obj.loggers(end+1) = logger;
-            end
+            % Add logger
+            obj.loggers(end+1) = logger;
+
             % Refresh the loggers static reference
             obj.setgetLoggers(obj.loggers);
 
