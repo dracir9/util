@@ -30,11 +30,15 @@ classdef logger < handle
                 case 'gfx'
                     if ~isgraphics(hdle)
                         error('Handle input must be a graphic object for type ''gfx''')
-                    elseif ~isfield(hdle, 'String')
-                        error('Unsupported graphic object. I must have a field named String')
+                    elseif ~isprop(hdle, 'String')
+                        error('Loggin is not supported for graphic object of type %s. I must have a field named String', hdle.Type)
                     end
                 case 'file'
-                    hdle = fopen([hdle '.log'], 'a');
+                    fName = [hdle '.log'];
+                    hdle = fopen(fName, 'a');
+                    if hdle == -1
+                        error('Could not open or create file at ''%s''', fName)
+                    end
                 otherwise
                     error('Invalid Logger type %s', type)
             end

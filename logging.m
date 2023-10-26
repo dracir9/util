@@ -48,12 +48,8 @@ classdef logging < handle
             end
 
             if isgraphics(output)
-                if isfield(output, 'String')
-                    % Log to a graphic object with the field string
-                    logger = util.logger(id, 'gfx', output, level, format);
-                else
-                    error('Graphic objects of type %s cannot be used for logging', output.Type)
-                end
+                % Log to a graphic object with the field string
+                logger = util.logger(id, 'gfx', output, level, format);
             elseif ischar(output) || (util.getMatlabVersion() > 2016.5 && isstring(output))
                 if strcmp(output, 'cmd')
                     % Log to command window
