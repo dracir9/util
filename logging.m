@@ -9,7 +9,7 @@ classdef logging < handle
     end
 
     properties (SetAccess = private)
-        loggers
+        loggers = util.logger.empty();
     end
 
     properties (Constant)
@@ -22,22 +22,11 @@ classdef logging < handle
             % various outputs
             %   Detailed explanation goes here
             if nargin == 0
-                obj.loggers = util.logger(0, 'cmd', [], obj.defaultLevel, obj.defaultFormat);
-            elseif nargin == 1
-                if isa(varargin{1}, 'util.logging')
-                    obj = varargin{1};
-                else
-                    if ischar(varargin{1}) || (util.getMatlabVersion() > 2016.5 && isstring(varargin{1}))
-                        if strcmp(varargin{1}, 'cmd')
-                            obj.loggers = util.logger(0, 'cmd', [], obj.defaultLevel, obj.defaultFormat);
-                        else
-                            obj.loggers = util.logger(0, 'file', varargin{1}, obj.defaultLevel, obj.defaultFormat);
-                        end
-                    else
-                        error(['Input must be a text containing the name of the output file,' ...
-                            ' for a file output, or the keyword ''cmd'' for command window output.'])
-                    end
-                end
+                obj.addOutput('cmd');
+            elseif nargin == 1 && isa(varargin{1}, 'util.logging')
+                obj = varargin{1};
+            else
+                obj.addOutput(varargin{:});
             end
             
             obj.setgetLoggers(obj.loggers);
@@ -54,6 +43,9 @@ classdef logging < handle
 
             % Generate a new unique ID
             id = max([obj.loggers.id])+1;
+            if isempty(id)
+                id = 0;
+            end
 
             if isgraphics(output)
                 if isfield(output, 'String')
@@ -62,7 +54,7 @@ classdef logging < handle
                 else
                     error('Graphic objects of type %s cannot be used for logging', output.Type)
                 end
-            elseif ischar(output)
+            elseif ischar(output) || (util.getMatlabVersion() > 2016.5 && isstring(output))
                 if strcmp(output, 'cmd')
                     % Log to command window
                     cmdExists = false;
@@ -86,6 +78,9 @@ classdef logging < handle
                     % Log to file
                     logger = util.logger(id, 'file', output, level, format);
                 end
+            else
+                error(['Invalid log output.\nInput must be a text containing the name of the output file,' ...
+                    ' for a file output, or the keyword ''cmd'' for command window output.'])
             end
 
             if ~isempty(logger)
