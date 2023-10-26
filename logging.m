@@ -196,4 +196,44 @@ classdef logging < handle
             valid = true;
         end
     end
+
+    methods (Static, Hidden)
+        function pass = selfTest()
+            pass = false;
+
+            file1 = char(randi([uint8('a'), uint8('z')], 1, randi(10)));
+            file2 = char(randi([uint8('a'), uint8('z')], 1, randi(10)));
+
+            a = util.logging();
+            b = util.logging('cmd');
+            c = util.logging(file1);
+            
+            % Add second cmd output
+            b.addOutput('cmd');
+            b.addOutput(file2);
+            b.addOutput('cmd');
+
+            if sum(strcmp({b.loggers.type}, 'cmd')) > 1
+                return
+            end
+
+            % Delete loggers
+            delete(a)
+            delete(b)
+            delete(c)
+
+            lastwarn('') % Clear last warning message
+
+            % Remove files
+            delete([file1 '.log'])
+            delete([file2 '.log'])
+
+            warnMsg = lastwarn;
+            if ~isempty(warnMsg) % Warning has ben thrown, files couldn't be deleted
+                return
+            end
+
+            pass = true;
+        end
+    end
 end
