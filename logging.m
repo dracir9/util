@@ -1,19 +1,25 @@
 classdef logging < handle
     %LOGGING Summary of this class goes here
     %   Detailed explanation goes here
-    
+
+    properties
+        %defaultLevel - Default log level for NEW outputs
+        %   Defines the default log level applied to new outputs
+        defaultLevel = 'I';
+    end
+
     properties (SetAccess = private)
         loggers
     end
 
     properties (Constant)
         defaultFormat = '[%c]: %s\n';
-        defaultLevel = 'T';
     end
     
     methods
         function obj = logging(varargin)
-            %LOGGING Construct an instance of this class
+            %LOGGING Initialize the infrastructure to log messages to
+            % various outputs
             %   Detailed explanation goes here
             if nargin == 0
                 obj.loggers = util.logger(0, 'cmd', [], obj.defaultLevel, obj.defaultFormat);
@@ -83,6 +89,7 @@ classdef logging < handle
             end
 
             if ~isempty(logger)
+                % Add logger
                 obj.loggers(end+1) = logger;
             end
             % Refresh the loggers static reference
@@ -90,6 +97,28 @@ classdef logging < handle
 
             if nargout > 0
                 outId = id;
+            end
+        end
+
+
+        function setLogLevel(obj, level, id)
+            %SETLOGLEVEL Sets the logging level
+            %
+            %   SETLOGLEVEL(OBJ, LEVEL) Set log level for all outputs.
+            %   SETLOGLEVEL(OBJ, LEVEL, ID) Set log level for output specified by ID.
+            %
+            % Inputs:
+            %
+            %   obj     - logging object
+            %   level   - Log level. It can be one of the following
+            %   characters, from maximum priority to lower: 'E', 'W', 'I', 'D', 'T'
+            %   id      - Identifier of the output that will be modified
+
+            if nargin == 2
+                % Assign level to all loggers
+                [obj.loggers.level] = deal(level);
+            else
+                obj.loggers([obj.loggers.id] == id).level = level;
             end
         end
 
@@ -144,10 +173,22 @@ classdef logging < handle
         end
 
         function delete(obj)
+            obj.trace('Log end')
             logs = obj.setgetLoggers();
             if numel(logs) == numel(obj.loggers) && all(obj.setgetLoggers() == obj.loggers)
                 obj.setgetLoggers([]);
             end
+        end
+
+        function set.defaultLevel(obj, val)
+            obj.checkLevel(val);
+            obj.defaultLevel = val;
+        end
+    end
+
+    methods (Static)
+        function num = level2Num(level)
+            num = find(strcmp({'E', 'W', 'I', 'D', 'V', 'T'}, level), 1);
         end
     end
 
@@ -158,6 +199,18 @@ classdef logging < handle
                 logHandle = obj;
             end
             h = logHandle;
+        end
+
+        function valid = checkLevel(level)
+            if ~ischar(level)
+                error('Level must be one of the following chars: ''E'', ''W'', ''I'', ''D'', ''T''.')
+            end
+
+            newVal = util.logging.level2Num(level);
+            if isempty(newVal)
+                error('Invalid logging level: %c\nAllowed values are ''E'', ''W'', ''I'', ''D'', ''T''.', val);
+            end
+            valid = true;
         end
     end
 end

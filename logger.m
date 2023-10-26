@@ -22,9 +22,7 @@ classdef logger < handle
             %   Detailed explanation goes here
 
             % Check inputs
-            if isempty(util.logger.level2Num(level))
-                error('Invalid logging level: %s\nAllowed values are ''E'', ''W'', ''I'', ''D'', ''T''', level);
-            end
+            util.logging.checkLevel(level);
 
             switch type
                 case 'cmd'
@@ -51,7 +49,7 @@ classdef logger < handle
 
         function print(obj, L, txt)
             for log = obj
-                if log.level2Num(L) <= log.level2Num(log.level)
+                if util.logging.level2Num(L) <= util.logging.level2Num(log.level)
                     txtFormated = sprintf(log.format, L, txt);
                     switch log.type
                         case 'cmd'
@@ -71,6 +69,11 @@ classdef logger < handle
             if strcmp(obj.type, 'file')
                 fclose(obj.handle);
             end
+        end
+
+        function set.level(obj, val)
+            util.logging.checkLevel(val);
+            obj.level = val;
         end
     end
 
@@ -117,10 +120,6 @@ classdef logger < handle
     end
 
     methods (Access = protected, Static)
-        function num = level2Num(level)
-            num = find(strcmp({'E', 'W', 'I', 'D', 'V', 'T'}, level), 1);
-        end
-
         function txt = print_(level, obj, args)
             if isa(obj, 'util.logging')
                 txt = sprintf(args{:});
