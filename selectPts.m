@@ -243,8 +243,8 @@ function [out, hgfx] = selectPts(ax, type, varargin)
                 if isfield(gui, 'hgfx')
                     gui.numPts = gui.numPts+1;
                     % Set point and create new one
-                    gui.hgfx.XData = [gui.hgfx.XData(1:gui.idx-1), xp, xp, gui.hgfx.XData(gui.idx+1:end)];
-                    gui.hgfx.YData = [gui.hgfx.YData(1:gui.idx-1), yp, yp, gui.hgfx.YData(gui.idx+1:end)];
+                    gui.hgfx.XData = [gui.hgfx.XData(1:gui.idx-1)', xp, xp, gui.hgfx.XData(gui.idx+1:end)'];
+                    gui.hgfx.YData = [gui.hgfx.YData(1:gui.idx-1)', yp, yp, gui.hgfx.YData(gui.idx+1:end)'];
                     gui.idx = gui.idx+1;
                 else
                     % First point
