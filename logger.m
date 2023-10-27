@@ -1,4 +1,4 @@
-classdef logger < handle
+classdef Logger < handle
     %LOGGING Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -16,13 +16,13 @@ classdef logger < handle
         format
     end
 
-    methods (Access = ?util.logging)
-        function obj = logger(id, type, hdle, level, format)
+    methods (Access = ?util.Logging)
+        function obj = Logger(id, type, hdle, level, format)
             %LOGGING Construct an instance of this class
             %   Detailed explanation goes here
 
             % Check inputs
-            util.logging.checkLevel(level);
+            util.Logging.checkLevel(level);
 
             switch type
                 case 'cmd'
@@ -53,7 +53,7 @@ classdef logger < handle
 
         function print(obj, L, txt)
             for log = obj
-                if util.logging.level2Num(L) <= util.logging.level2Num(log.level)
+                if util.Logging.level2Num(L) <= util.Logging.level2Num(log.level)
                     txtFormated = sprintf(log.format, L, txt);
                     switch log.type
                         case 'cmd'
@@ -76,14 +76,14 @@ classdef logger < handle
         end
 
         function set.level(obj, val)
-            util.logging.checkLevel(val);
+            util.Logging.checkLevel(val);
             obj.level = val;
         end
     end
 
     methods (Static)
         function outTxt = error(obj, varargin)
-            txt = util.logger.print_('E', obj, varargin);
+            txt = util.Logger.print_('E', obj, varargin);
 
             if nargout > 0
                 outTxt = txt;
@@ -91,7 +91,7 @@ classdef logger < handle
         end
 
         function outTxt = warning(obj, varargin)
-            txt = util.logger.print_('W', obj, varargin);
+            txt = util.Logger.print_('W', obj, varargin);
 
             if nargout > 0
                 outTxt = txt;
@@ -99,7 +99,7 @@ classdef logger < handle
         end
 
         function outTxt = info(obj, varargin)
-            txt = util.logger.print_('I', obj, varargin);
+            txt = util.Logger.print_('I', obj, varargin);
 
             if nargout > 0
                 outTxt = txt;
@@ -107,7 +107,7 @@ classdef logger < handle
         end
 
         function outTxt = debug(obj, varargin)
-            txt = util.logger.print_('D', obj, varargin);
+            txt = util.Logger.print_('D', obj, varargin);
 
             if nargout > 0
                 outTxt = txt;
@@ -115,7 +115,7 @@ classdef logger < handle
         end
 
         function outTxt = trace(obj, varargin)
-            txt = util.logger.print_('T', obj, varargin);
+            txt = util.Logger.print_('T', obj, varargin);
 
             if nargout > 0
                 outTxt = txt;
@@ -125,12 +125,12 @@ classdef logger < handle
 
     methods (Access = protected, Static)
         function txt = print_(level, obj, args)
-            if isa(obj, 'util.logging')
+            if isa(obj, 'util.Logging')
                 txt = sprintf(args{:});
                 obj.loggers.print(level, txt);
             else
                 txt = sprintf(obj, args{:});
-                loggers = util.logging.setgetLoggers();
+                loggers = util.Logging.setgetLoggers();
                 if ~isempty(loggers)
                     loggers.print(level, txt);
                 else

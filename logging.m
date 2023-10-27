@@ -1,4 +1,4 @@
-classdef logging < handle
+classdef Logging < handle
     %LOGGING Summary of this class goes here
     %   Detailed explanation goes here
 
@@ -9,7 +9,7 @@ classdef logging < handle
     end
 
     properties (SetAccess = private)
-        loggers = util.logger.empty();
+        loggers = util.Logger.empty();
     end
 
     properties (Constant)
@@ -17,13 +17,13 @@ classdef logging < handle
     end
     
     methods
-        function obj = logging(varargin)
+        function obj = Logging(varargin)
             %LOGGING Initialize the infrastructure to log messages to
             % various outputs
             %   Detailed explanation goes here
             if nargin == 0
                 obj.addOutput('cmd');
-            elseif nargin == 1 && isa(varargin{1}, 'util.logging')
+            elseif nargin == 1 && isa(varargin{1}, 'util.Logging')
                 obj = varargin{1};
             else
                 obj.addOutput(varargin{:});
@@ -49,7 +49,7 @@ classdef logging < handle
 
             if isgraphics(output)
                 % Log to a graphic object with the field string
-                logger = util.logger(id, 'gfx', output, level, format);
+                logger = util.Logger(id, 'gfx', output, level, format);
             elseif ischar(output) || (util.getMatlabVersion() > 2016.5 && isstring(output))
                 if strcmp(output, 'cmd')
                     % Log to command window
@@ -58,10 +58,10 @@ classdef logging < handle
                     obj.loggers(strcmp({obj.loggers.type}, 'cmd')) = [];
 
                     % Create a new one
-                    logger = util.logger(id, 'cmd', [], level, format);
+                    logger = util.Logger(id, 'cmd', [], level, format);
                 else
                     % Log to file
-                    logger = util.logger(id, 'file', output, level, format);
+                    logger = util.Logger(id, 'file', output, level, format);
                 end
             else
                 error(['Invalid log output.\nInput must be a text containing the name of the output file,' ...
@@ -81,14 +81,14 @@ classdef logging < handle
 
 
         function setLogLevel(obj, level, id)
-            %SETLOGLEVEL Sets the logging level
+            %SETLOGLEVEL Sets the log level
             %
             %   SETLOGLEVEL(OBJ, LEVEL) Set log level for all outputs.
             %   SETLOGLEVEL(OBJ, LEVEL, ID) Set log level for output specified by ID.
             %
             % Inputs:
             %
-            %   obj     - logging object
+            %   obj     - Logging object
             %   level   - Log level. It can be one of the following
             %   characters, from maximum priority to lower: 'E', 'W', 'I', 'D', 'T'
             %   id      - Identifier of the output that will be modified
@@ -171,7 +171,7 @@ classdef logging < handle
         end
     end
 
-    methods (Access = ?util.logger, Static)
+    methods (Access = ?util.Logger, Static)
         function h = setgetLoggers(obj)
             persistent logHandle;
             if nargin
@@ -185,9 +185,9 @@ classdef logging < handle
                 error('Level must be one of the following chars: ''E'', ''W'', ''I'', ''D'', ''T''.')
             end
 
-            newVal = util.logging.level2Num(level);
+            newVal = util.Logging.level2Num(level);
             if isempty(newVal)
-                error('Invalid logging level: %c\nAllowed values are ''E'', ''W'', ''I'', ''D'', ''T''.', val);
+                error('Invalid log level: %c\nAllowed values are ''E'', ''W'', ''I'', ''D'', ''T''.', val);
             end
             valid = true;
         end
@@ -200,9 +200,9 @@ classdef logging < handle
             file1 = char(randi([uint8('a'), uint8('z')], 1, randi(10)));
             file2 = char(randi([uint8('a'), uint8('z')], 1, randi(10)));
 
-            a = util.logging();
-            b = util.logging('cmd');
-            c = util.logging(file1);
+            a = util.Logging();
+            b = util.Logging('cmd');
+            c = util.Logging(file1);
             
             % Add second cmd output
             b.addOutput('cmd');
