@@ -54,14 +54,13 @@ classdef Logger < handle
         function print(obj, L, txt)
             for log = obj
                 if util.Logging.level2Num(L) <= util.Logging.level2Num(log.level)
-                    txtFormated = sprintf(log.format, L, txt);
                     switch log.type
                         case 'cmd'
-                            fprintf(txtFormated);
+                            fprintf(log.format, L, txt);
                         case 'file'
-                            fprintf(log.handle, txtFormated);
+                            fprintf(log.handle, log.format, L, txt);
                         case 'gfx'
-                            log.handle.String = txtFormated;
+                            log.handle.String = sprintf(log.format, L, txt);
                     end
                 end
             end
