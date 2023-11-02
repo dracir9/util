@@ -250,7 +250,7 @@ function [out, hgfx] = selectPts(ax, type, varargin)
                 end
             case 'rectangle'
                 if isfield(gui, 'hgfx')
-                    out = [gui.hgfx.XData(1), xp; gui.hgfx.YData(1), yp];
+                    out = [gui.hgfx.XData(1), xp; gui.hgfx.YData(1), yp]';
                     resume = true; % Return from main function
                 else
                     % First point
@@ -258,8 +258,8 @@ function [out, hgfx] = selectPts(ax, type, varargin)
 
                     title(gui.ax, 'Left click to place points, right click to end')
 
-                    gui.hgfx = patch([xp; xp+1; xp+1; xp], ...
-                        [yp;yp;yp-1;yp-1], 'r', 'Parent', gui.ax, opts.args{:});
+                    gui.hgfx = patch([xp; xp; xp; xp], ...
+                        [yp;yp;yp;yp], 'r', 'Parent', gui.ax, opts.args{:});
 
                     gui.fig.WindowButtonMotionFcn = @mouseUpdtRect;
                     % Remove crosshair
