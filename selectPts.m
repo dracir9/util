@@ -147,6 +147,15 @@ function [out, hgfx] = selectPts(ax, type, varargin)
         drawnow limitrate
     end
 
+    function mouseUpdtRect(~,~)
+        cp = gui.ax.CurrentPoint;
+        xp = cp(1,1);
+        yp = cp(1,2);
+        gui.hgfx.XData(2:4) = [xp;xp;gui.hgfx.XData(1)];
+        gui.hgfx.YData(2:4) = [gui.hgfx.YData(1);yp;yp];
+        drawnow limitrate
+    end
+
     function mouseUpdtPose(~, ~)
         xp1 = out(1);
         yp1 = out(2);
@@ -239,6 +248,23 @@ function [out, hgfx] = selectPts(ax, type, varargin)
                     % Show pointer
                     gui.fig.Pointer = 'arrow';
                 end
+            case 'rectangle'
+                if isfield(gui, 'hgfx')
+                    out = [gui.hgfx.XData(1), xp; gui.hgfx.YData(1), yp];
+                    resume = true; % Return from main function
+                else
+                    % First point
+                    gui.numPts = numel(xp);
+
+                    title(gui.ax, 'Left click to place points, right click to end')
+
+                    gui.hgfx = patch([xp; xp+1; xp+1; xp], ...
+                        [yp;yp;yp-1;yp-1], 'r', 'Parent', gui.ax, opts.args{:});
+
+                    gui.fig.WindowButtonMotionFcn = @mouseUpdtRect;
+                    % Remove crosshair
+                    delete(gui.crosshair)
+                end
             case 'area'
                 if isfield(gui, 'hgfx')
                     gui.numPts = gui.numPts+1;
@@ -296,6 +322,14 @@ function options = parseInput(type, args)
             options.minMaxPoints = [2 2];
             options.radius = 0.27;
             options.length = 0.6;
+        case 'rectangle'
+            allowedOpts = {'FaceColor', 'FaceAlpha', 'EdgeColor', 'EdgeAlpha',...
+                'LineStyle', 'LineWidth', 'Marker', 'MarkerSize', 'MarkerEdgeColor',...
+                'MarkerFaceColor', 'DefaultPoints', 'InsertIndex'};
+            options.minMaxPoints = [2 2];
+            if numel(args) < 1
+                options.args = {'FaceAlpha', 0};
+            end
         case 'area'
             allowedOpts = {'FaceColor', 'FaceAlpha', 'EdgeColor', 'EdgeAlpha',...
                 'LineStyle', 'LineWidth', 'Marker', 'MarkerSize', 'MarkerEdgeColor',...
