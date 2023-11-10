@@ -129,7 +129,7 @@ classdef Logger < handle
                 obj.loggers.print(level, txt);
             else
                 txt = sprintf(obj, args{:});
-                loggers = util.Logging.setgetLoggers();
+                loggers = util.Logging.getLoggers();
                 if ~isempty(loggers)
                     loggers.print(level, txt);
                 else

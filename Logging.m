@@ -153,8 +153,8 @@ classdef Logging < handle
 
         function delete(obj)
             obj.trace('Log end')
-            logs = obj.setgetLoggers();
-            if numel(logs) == numel(obj.loggers) && all(obj.setgetLoggers() == obj.loggers)
+            logs = obj.getLoggers();
+            if numel(logs) == numel(obj.loggers) && all(obj.getLoggers() == obj.loggers)
                 obj.setgetLoggers([]);
             end
         end
@@ -171,13 +171,19 @@ classdef Logging < handle
         end
     end
 
-    methods (Access = ?util.Logger, Static)
+    methods (Access = private, Static)
         function h = setgetLoggers(obj)
             persistent logHandle;
             if nargin
                 logHandle = obj;
             end
             h = logHandle;
+        end
+    end
+
+    methods (Access = ?util.Logger, Static)
+        function h = getLoggers()
+            h = util.Logging.setgetLoggers();
         end
 
         function valid = checkLevel(level)
