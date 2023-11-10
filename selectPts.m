@@ -81,7 +81,7 @@ function [out, hgfx] = selectPts(ax, type, varargin)
     end
 
     % Wait for user input
-    uiwait(gui.fig)
+    waitfor(gui.fig, 'UserData', 'r')
 
     % If figure has been deleted return
     if ~isvalid(gui.fig)
@@ -127,13 +127,13 @@ function [out, hgfx] = selectPts(ax, type, varargin)
         [gui, endSelect] = updtGObj(gui, opts, xp, yp);
 
         if endSelect
-            uiresume;
+            gui.fig.UserData = 'r';
         elseif gui.numPts >= opts.minMaxPoints(2)
             % Entered maximum number of points
             xp = [gui.hgfx.XData(1:gui.idx-1) gui.hgfx.XData(gui.idx+1:end)];
             yp = [gui.hgfx.YData(1:gui.idx-1) gui.hgfx.YData(gui.idx+1:end)];
             out = [xp' yp'];
-            uiresume; % Return from main function
+            gui.fig.UserData = 'r'; % Return from main function
         end
     end
 
@@ -183,7 +183,7 @@ function [out, hgfx] = selectPts(ax, type, varargin)
                 out = [gui.hgfx.XData(:), gui.hgfx.YData(:)];
                 out(gui.idx,:) = []; % Romove last edit point
             end
-            uiresume; % Return from main function
+            gui.fig.UserData = 'r'; % Return from main function
         end
     end
 
@@ -416,6 +416,10 @@ function [gui, initState] = initGUI(ax)
     
     gui.ax = ax;
 
+    % Store UserData
+    initState.UserData = gui.fig.UserData;
+    gui.fig.UserData = 's';
+
     % Suspend figure functions
     initState.uisuspendState = uisuspend(gui.fig);
 
@@ -479,6 +483,9 @@ end
 
 % Restore figure to initial state and resume execution
 function gui = resetGUI(gui, initState)
+    % Restore UserData
+    gui.fig.UserData = initState.UserData;
+
     % Restore callbacks
     gui.fig.WindowButtonDownFcn = initState.WindowButtonDownFcn;
     gui.fig.WindowButtonMotionFcn = initState.WindowButtonMotionFcn;
