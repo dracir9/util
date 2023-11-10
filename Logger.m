@@ -58,7 +58,7 @@ classdef Logger < handle
                         case 'cmd'
                             fprintf(log.format, L, txt);
                         case 'file'
-                            fprintf(log.handle, log.format, L, txt);
+                            fprintf(log.handle, ['%s ' log.format], datetime, L, txt);
                         case 'gfx'
                             log.handle.String = sprintf(log.format, L, txt);
                     end
