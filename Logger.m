@@ -34,6 +34,14 @@ classdef Logger < handle
                         error('Loggin is not supported for graphic object of type %s. I must have a field named String', hdle.Type)
                     end
                 case 'file'
+                    hdle = char(hdle);
+                    idx = find(hdle == '/' | hdle == '\', 1, 'last');
+                    if ~isempty(idx) 
+                        folderName = hdle(1:idx);
+                        if ~exist(folderName, 'dir')
+                            mkdir(folderName)
+                        end
+                    end
                     fName = [hdle '.log'];
                     hdle = fopen(fName, 'a');
                     if hdle == -1
