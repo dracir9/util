@@ -61,6 +61,8 @@ function [out, hgfx] = selectPts(ax, type, varargin)
 
     [gui, prevState] = initGUI(ax);
 
+    c = onCleanup(@() resetGUI(gui, prevState));
+
     if isempty(gui)
         out = [];
         return;
@@ -90,9 +92,6 @@ function [out, hgfx] = selectPts(ax, type, varargin)
         return
     end
 
-    % Restore gui state
-    gui = resetGUI(gui, prevState);
-
     % Return graphic objects if requested
     if nargout < 2 || isempty(out)
         % If a graphic object was used
@@ -112,6 +111,9 @@ function [out, hgfx] = selectPts(ax, type, varargin)
         end
         hgfx = gui.hgfx;
     end
+
+    % Restore gui state
+    cleanup(c)
 
     function mouseBtnDwn(src, ~)
         seltype = src.SelectionType;
@@ -482,7 +484,7 @@ function [gui, initState] = initGUI(ax)
 end
 
 % Restore figure to initial state and resume execution
-function gui = resetGUI(gui, initState)
+function resetGUI(gui, initState)
     % Restore UserData
     gui.fig.UserData = initState.UserData;
 
@@ -553,4 +555,10 @@ function updateCrossHair(fig, crossHair)
     set(crossHair(2), 'Position', [cp(1)+gap cp(2) figWidth-cp(1)-gap thickness]);
     set(crossHair(3), 'Position', [cp(1) 0 thickness cp(2)-gap]);
     set(crossHair(4), 'Position', [cp(1) cp(2)+gap thickness figHeight-cp(2)-gap]);
+end
+
+function cleanup(c)
+    if isvalid(c)
+        delete(c);
+    end
 end
