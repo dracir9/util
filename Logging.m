@@ -237,8 +237,12 @@ classdef Logging < handle
                 util.Logger.error(e, 'Some message')
 
                 util.Logger.error(b, e)
-                util.Logger.error(b, e, 'Hey')
+                util.Logger.error(b, e, 'You should check this')
             end
+
+            b.error('An error')
+            util.Logger.error('Simple error')
+            util.Logger.error('Error again?')
 
             % Delete loggers
             delete(a)
