@@ -102,9 +102,18 @@ classdef Logging < handle
         end
 
         function outTxt = error(obj, varargin)
-            txt = sprintf(varargin{:});
-            
-            obj.loggers.print('E', txt);
+            if isa(varargin{1}, 'MException')
+                txt = util.Logger.printStack(varargin{1});
+                obj.loggers.print('E', txt);
+
+                if nargin > 2
+                    txt = sprintf(varargin{2:end});
+                    obj.loggers.print('E', txt);
+                end
+            else
+                txt = sprintf(varargin{:});
+                obj.loggers.print('E', txt);
+            end
 
             if nargout > 0
                 outTxt = txt;
@@ -200,8 +209,7 @@ classdef Logging < handle
     end
 
     methods (Static, Hidden)
-        function pass = selfTest()
-            pass = false;
+        function selfTest()
 
             file1 = char(randi([uint8('a'), uint8('z')], 1, randi(10)));
             file2 = char(randi([uint8('a'), uint8('z')], 1, randi(10)));
@@ -218,9 +226,18 @@ classdef Logging < handle
             assert(sum(strcmp({b.loggers.type}, 'cmd')) == 1)
 
             try
-                error('Hey')
+                error(['Incorrect dimensions for matrix multiplication. Check that the number of columns ' ...
+                    'in the first matrix matches the number of rows in the second matrix. ' ...
+                    'To operate on each element of the matrix individually, use TIMES (.*) for elementwise multiplication.'])
             catch e
-                util.printStack(e)
+                b.error(e, 'Something went wrong :(')
+                b.error(e)
+
+                util.Logger.error(e)
+                util.Logger.error(e, 'Some message')
+
+                util.Logger.error(b, e)
+                util.Logger.error(b, e, 'Hey')
             end
 
             % Delete loggers
@@ -238,8 +255,6 @@ classdef Logging < handle
             if ~isempty(warnMsg) % Warning has ben thrown, files couldn't be deleted
                 return
             end
-
-            pass = true;
         end
     end
 end

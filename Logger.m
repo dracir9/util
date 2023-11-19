@@ -90,7 +90,49 @@ classdef Logger < handle
 
     methods (Static)
         function outTxt = error(obj, varargin)
-            txt = util.Logger.print_('E', obj, varargin);
+            if isa(obj, 'util.Logging')
+                if isa(varargin{1}, 'MException')
+                    txt = obj.loggers.printStack(varargin{1});
+                    obj.loggers.print('E', txt);
+    
+                    if nargin > 2
+                        txt = sprintf(varargin{2:end});
+                        obj.loggers.print('E', txt);
+                    end
+                else
+                    txt = sprintf(varargin{:});
+                    obj.loggers.print('E', txt);
+                end
+            else
+                loggers = util.Logging.getLoggers();
+                if ~isempty(loggers)
+                    if isa(obj, 'MException')
+                        txt = loggers.printStack(obj);
+                        loggers.print('E', txt);
+        
+                        if nargin > 1
+                            txt = sprintf(varargin{:});
+                            loggers.print('E', txt);
+                        end
+                    else
+                        txt = sprintf(obj, varargin{:});
+                        loggers.print('E', txt);
+                    end
+                else
+                    if isa(obj, 'MException')
+                        txt = loggers.printStack(obj);
+                        fprintf('E: %s\n', txt);
+        
+                        if nargin > 1
+                            txt = sprintf(varargin{:});
+                            fprintf('E: %s\n', txt);
+                        end
+                    else
+                        txt = sprintf(obj, varargin{:});
+                        fprintf('E: %s\n', txt);
+                    end
+                end
+            end
 
             if nargout > 0
                 outTxt = txt;
@@ -126,6 +168,24 @@ classdef Logger < handle
 
             if nargout > 0
                 outTxt = txt;
+            end
+        end
+
+        function str = printStack(e)
+            str = sprintf('%s\n', e.message);
+            for ii = 1:numel(e.stack)
+                stk = e.stack(ii);
+                bkslshPos = find(stk.file == '\', 1, 'last');
+                dotPos = find(stk.file == '.', 1, 'last');
+        
+                file = stk.file(bkslshPos+1:dotPos-1);
+                if strcmp(file, stk.name)
+                    str = sprintf('%s\tIn file <a href="matlab: opentoline(''%s'', %d)">%s</a> (line %d)\n', ...
+                        str, stk.file, stk.line, file, stk.line);
+                else
+                    str = sprintf('%s\tIn file <a href="matlab: opentoline(''%s'', %d)">%s>%s</a> (line %d)\n', ...
+                        str, stk.file, stk.line, file, stk.name, stk.line);
+                end
             end
         end
     end
