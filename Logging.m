@@ -167,7 +167,7 @@ classdef Logging < handle
 
     methods (Static)
         function num = level2Num(level)
-            num = find(strcmp({'E', 'W', 'I', 'D', 'V', 'T'}, level), 1);
+            num = strfind('EWIDVT', level);
         end
     end
 
