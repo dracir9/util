@@ -215,56 +215,13 @@ classdef Logging < handle
             b.addOutput(file2);
             b.addOutput('cmd');
 
-            if sum(strcmp({b.loggers.type}, 'cmd')) > 1
-                return
-            end
+            assert(sum(strcmp({b.loggers.type}, 'cmd')) == 1)
 
-            %%%%%%%%%%%%%
-            % Performance
-            %%%%%%%%%%%%%
-            mintime = 2;
-            % Log to cmd only
-            t1 = cputime;
-            t2 = t1;
-            k = 0;
-            while (t2-t1) < mintime
-                a.info('Hey')
-                k = k + 1;
-                t2 = cputime;
+            try
+                error('Hey')
+            catch e
+                util.printStack(e)
             end
-            T1 = (t2-t1)/k;
-
-            % Log to file only
-            t1 = cputime;
-            t2 = t1;
-            k = 0;
-            while (t2-t1) < mintime
-                c.info('Hey')
-                k = k + 1;
-                t2 = cputime;
-            end
-            T2 = (t2-t1)/k;
-
-            % Log to file and cmd
-            t1 = cputime;
-            t2 = t1;
-            k = 0;
-            while (t2-t1) < mintime
-                b.info('Hey')
-                k = k + 1;
-                t2 = cputime;
-            end
-            T3 = (t2-t1)/k;
-
-            t1 = cputime;
-            t2 = t1;
-            k = 0;
-            while (t2-t1) < mintime
-                disp('Hey')
-                k = k + 1;
-                t2 = cputime;
-            end
-            T4 = (t2-t1)/k;
 
             % Delete loggers
             delete(a)
@@ -281,11 +238,6 @@ classdef Logging < handle
             if ~isempty(warnMsg) % Warning has ben thrown, files couldn't be deleted
                 return
             end
-
-            fprintf('Time to cmd: %d\n', T1);
-            fprintf('Time to file: %d\n', T2);
-            fprintf('Time to file and cmd: %d\n', T3);
-            fprintf('Disp time: %d\n', T4);
 
             pass = true;
         end
