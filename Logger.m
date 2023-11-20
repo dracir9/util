@@ -4,6 +4,7 @@ classdef Logger < handle
     
     properties (Access = private)
         handle
+        tmr
     end
 
     properties (SetAccess = private)
@@ -43,10 +44,13 @@ classdef Logger < handle
                         end
                     end
                     fName = [hdle '.log'];
-                    hdle = fopen(fName, 'a');
+                    hdle = fopen(fName, 'A');
                     if hdle == -1
                         error('Could not open or create file at ''%s''', fName)
                     end
+
+                    % Add creation time
+                    fprintf(hdle, 'T = %s:\n', char(datetime));
                 otherwise
                     error('Invalid Logger type %s', type)
             end
@@ -57,6 +61,9 @@ classdef Logger < handle
             obj.handle = hdle;
             obj.level = level;
             obj.format = format;
+
+            % Initialize timer
+            obj.tmr = tic;
         end
 
         function print(obj, L, txt)
@@ -66,7 +73,7 @@ classdef Logger < handle
                         case 'cmd'
                             fprintf(log.format, L, txt);
                         case 'file'
-                            fprintf(log.handle, ['%s ' log.format], char(datetime), L, txt);
+                            fprintf(log.handle, ['T+%f ' log.format], toc(log.tmr), L, txt);
                         case 'gfx'
                             log.handle.String = sprintf(log.format, L, txt);
                     end
