@@ -50,7 +50,7 @@ classdef Logger < handle
                     end
 
                     % Add creation time
-                    fprintf(hdle, 'T = %s:\n', char(datetime));
+                    fprintf(hdle, 'T = %s\n', char(datetime));
                 otherwise
                     error('Invalid Logger type %s', type)
             end
