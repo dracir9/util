@@ -73,7 +73,7 @@ classdef Logger < handle
                         case 'cmd'
                             fprintf(log.format, L, txt);
                         case 'file'
-                            fprintf(log.handle, ['T+%f ' log.format], toc(log.tmr), L, txt);
+                            fprintf(log.handle, ['T+%08.3f ' log.format], toc(log.tmr), L, txt);
                         case 'gfx'
                             log.handle.String = sprintf(log.format, L, txt);
                     end
