@@ -75,7 +75,9 @@ classdef Logger < handle
                         case 'file'
                             fprintf(log.handle, ['T+%08.3f ' log.format], toc(log.tmr), L, txt);
                         case 'gfx'
-                            log.handle.String = sprintf(log.format, L, txt);
+                            if isvalid(log.handle)
+                                log.handle.String = sprintf(log.format, L, txt);
+                            end
                     end
                 end
             end
