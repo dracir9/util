@@ -74,6 +74,10 @@ classdef Logger < handle
                             fprintf(log.format, L, txt);
                         case 'file'
                             fprintf(log.handle, ['T+%08.3f ' log.format], toc(log.tmr), L, txt);
+
+                            if L == 'E' % Force a flush to the file buffers
+                                fseek(log.handle, 0, 'eof');
+                            end
                         case 'gfx'
                             if isvalid(log.handle)
                                 log.handle.String = sprintf(log.format, L, txt);
