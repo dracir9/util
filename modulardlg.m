@@ -24,7 +24,7 @@ classdef modulardlg < handle
     end
 
     properties (Access = private)
-        elems = gobjects(0);
+        elems = struct('hdle', gobjects(0), 'var', '');
     end
 
     properties (Constant, Access = private)
@@ -36,6 +36,9 @@ classdef modulardlg < handle
         function dlg = modulardlg(varargin)
             %PROMPTDLG Construct an instance of this class
             %   Detailed explanation goes here
+
+            % Delete all elements
+            dlg.elems(:) = [];
 
             figPos = [];
             if nargin > 0
@@ -86,13 +89,30 @@ classdef modulardlg < handle
         end
 
         function id = addButton(dlg, txt, cb)
-            dlg.elems(end+1) = uicontrol(...
+            dlg.elems(end+1).hdle = uicontrol(...
                 'style'   , 'pushbutton',...
                 'parent'  , dlg.fig,...
                 'string'  , txt,...
                 'position', [dlg.margin(1),dlg.margin(2), dlg.controlWidth/2.5, dlg.controlHeight*1.5],...
                 'FontSize', dlg.fontsize,...
                 'Callback', @(src, evt)cb(dlg, src, evt));
+
+            dlg.draw()
+
+            if nargout > 0
+                id = numel(dlg.elems);
+            end
+        end
+
+        function id = addEdit(dlg, txt, varName)
+            dlg.elems(end+1).hdle = uicontrol(...
+                'style'   , 'edit',...
+                'parent'  , dlg.fig,...
+                'string'  , txt,...
+                'position', [dlg.margin(1),dlg.margin(2), dlg.controlWidth, dlg.controlHeight],...
+                'FontSize', dlg.fontsize);
+
+            dlg.elems(end).var = varName;
 
             dlg.draw()
 
@@ -125,7 +145,7 @@ classdef modulardlg < handle
 
             % Elements height
             for elem = dlg.elems
-                height = height + elem.Position(4);
+                height = height + elem.hdle.Position(4);
             end
 
             % Add margins
@@ -138,7 +158,7 @@ classdef modulardlg < handle
 
             % Elements width
             for elem = dlg.elems
-                width = max(width, elem.Position(3));
+                width = max(width, elem.hdle.Position(3));
             end
 
             % Add margins
@@ -149,13 +169,13 @@ classdef modulardlg < handle
 
             % Adjust element position
             for elem = dlg.elems
-                elem.Position(1) = (dlg.totalWidth - dlg.margin(1) - dlg.margin(3))/2 - elem.Position(3)/2;
+                elem.hdle.Position(1) = (dlg.totalWidth - dlg.margin(1) - dlg.margin(3))/2 - elem.hdle.Position(3)/2;
             end
 
             Ypos = dlg.margin(2);
             for elem = dlg.elems
-                elem.Position(2) = Ypos;
-                Ypos = Ypos + elem.Position(4) + dlg.padding;
+                elem.hdle.Position(2) = Ypos;
+                Ypos = Ypos + elem.hdle.Position(4) + dlg.padding;
             end
         end
 
@@ -167,7 +187,8 @@ classdef modulardlg < handle
     methods (Static, Hidden)
         function selfTest()
             dlg = util.modulardlg();
-            dlg.addButton('Hey!', @(varargin)pause(0))
+            dlg.addButton('Hey!', @(varargin)pause(0));
+            dlg.addEdit('Def', 'myvar');
             dlg.addButton('Hey!', @(varargin)pause(0))
             dlg.show()
         end
