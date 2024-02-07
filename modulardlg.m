@@ -14,14 +14,22 @@ classdef modulardlg < handle
         bgcolor
     end
 
-    properties (SetAccess = private)
-        totalWidth = 10;
-        totalHeight = 10;
+    properties (Dependent)
+        Position
+    end
+
+    properties (Dependent, SetAccess = private)
+        totalWidth;
+        totalHeight;
     end
 
     properties (Access = private)
         elems = gobjects(0);
-        
+    end
+
+    properties (Constant, Access = private)
+        minWidth = 200;
+        minHeight = 20;
     end
     
     methods
@@ -41,26 +49,28 @@ classdef modulardlg < handle
             % get screensize and determine proper figure position
             if isempty(dlg.fig)
                 scz = get(0, 'ScreenSize');               % put the window in the center of the screen
-                scx = round(scz(3)/2 - dlg.totalWidth/2);    % (this will usually work fine, except on some  
-                scy = round(scz(4)/2 - dlg.totalHeight/2);    % multi-monitor setups)   
+                scx = round(scz(3)/2 - dlg.minWidth/2);    % (this will usually work fine, except on some  
+                scy = round(scz(4)/2 - dlg.minHeight/2);    % multi-monitor setups)   
             else
-                scx = round(figPos(1) - dlg.totalWidth/2);
-                scy = round(figPos(2) - dlg.totalHeight/2);
+                scx = round(figPos(1) - dlg.minWidth/2);
+                scy = round(figPos(2) - dlg.minHeight/2);
             end
 
             dlg.fig = figure(...
-             'position'        , [scx, scy, dlg.totalWidth, dlg.totalHeight],...% figure position
+             'position'        , [scx, scy, dlg.minWidth, dlg.minHeight],...% figure position
              'visible'         , 'off',...         % Hide the dialog while in construction
              'backingstore'    , 'off',...         % DON'T save a copy in the background         
-             'resize'          , 'off', ...        % but just keep it resizable
-             'units'           , 'pixels',...      % better for drawing
+             'resize'          , 'off', ...        % disable resizing
+             'units'           , 'pixels',...
              'DockControls'    , 'off',...         % force it to be non-dockable
-             'name'            , 'Settings',...         % dialog title
+             'name'            , 'Settings',...    % dialog title
              'menubar'         , 'none', ...       % no menubar
              'toolbar'         , 'none', ...       % no toolbar
              'NumberTitle'     , 'off',...
              'UserData'        , 'r',...
              'CloseRequestFcn' , @(src, evt)close_Cb(dlg, src));% Close callback
+
+            dlg.Position = [scx, scy, dlg.minWidth, dlg.minHeight];
 
             dlg.bgcolor = get(0, 'defaultUicontrolBackgroundColor');
             dlg.fontsize = get(0, 'defaultuicontrolfontsize');
@@ -90,11 +100,28 @@ classdef modulardlg < handle
                 id = numel(dlg.elems);
             end
         end
+
+        function set.Position(dlg, val)
+            dlg.fig.Position = val;
+        end
+
+        function val = get.Position(dlg)
+            val = dlg.fig.Position;
+        end
+
+        function val = get.totalWidth(dlg)
+            val = dlg.Position(3);
+        end
+
+        function val = get.totalHeight(dlg)
+            val = dlg.Position(4);
+        end
     end
 
     methods (Access = private)
         function draw(dlg)
             height = 0;
+            width = 0;
 
             % Elements height
             for elem = dlg.elems
@@ -109,10 +136,22 @@ classdef modulardlg < handle
                 height = height + dlg.padding*(numel(dlg.elems)-1);
             end
 
-            dlg.totalHeight = height;
-            dlg.fig.Position(4) = dlg.totalHeight;
+            % Elements width
+            for elem = dlg.elems
+                width = max(width, elem.Position(3));
+            end
+
+            % Add margins
+            width = width + dlg.margin(1) + dlg.margin(3);
+
+            dlg.Position(3) = max(width, dlg.minWidth);
+            dlg.Position(4) = max(height, dlg.minHeight);
 
             % Adjust element position
+            for elem = dlg.elems
+                elem.Position(1) = (dlg.totalWidth - dlg.margin(1) - dlg.margin(3))/2 - elem.Position(3)/2;
+            end
+
             Ypos = dlg.margin(2);
             for elem = dlg.elems
                 elem.Position(2) = Ypos;
