@@ -24,7 +24,10 @@ classdef modulardlg < handle
     end
 
     properties (Access = private)
-        elems = struct('hdle', gobjects(0), 'var', '');
+        rootElems = [];
+        elems = struct('hdle', gobjects(0), 'var', '', 'type', '', 'weight', -1, 'size', [], 'Children', [], 'Parent', []);
+
+        activeElement = 0;
     end
 
     properties (Constant, Access = private)
@@ -88,8 +91,10 @@ classdef modulardlg < handle
             delete(dlg.fig)
         end
 
-        function id = addButton(dlg, txt, cb)
-            dlg.elems(end+1).hdle = uicontrol(...
+        function outId = addButton(dlg, txt, cb)
+            id = dlg.registerElement('Button');
+
+            dlg.elems(id).hdle = uicontrol(...
                 'style'   , 'pushbutton',...
                 'parent'  , dlg.fig,...
                 'string'  , txt,...
@@ -100,31 +105,52 @@ classdef modulardlg < handle
             dlg.draw()
 
             if nargout > 0
-                id = numel(dlg.elems);
+                outId = id;
             end
         end
 
-        function id = addEdit(dlg, txt, varName)
-            dlg.elems(end+1).hdle = uicontrol(...
+        function outId = addEdit(dlg, txt, varName)
+            id = dlg.registerElement('Edit');
+
+            dlg.elems(id).hdle = uicontrol(...
                 'style'   , 'edit',...
                 'parent'  , dlg.fig,...
                 'string'  , txt,...
                 'position', [dlg.margin(1),dlg.margin(2), dlg.controlWidth, dlg.controlHeight],...
                 'FontSize', dlg.fontsize);
 
-            dlg.elems(end).var = varName;
+            dlg.elems(id).var = varName;
 
             dlg.draw()
 
             if nargout > 0
-                id = numel(dlg.elems);
+                outId = id;
             end
         end
 
+        function outId = addHBox(dlg)
+            id = dlg.registerElement('HBox');
+
+            % Set as the active element
+            dlg.activeElement = id;
+
+            dlg.draw()
+
+            if nargout > 0
+                outId = id;
+            end
+        end
+
+        function endBox(dlg)
+            dlg.activeElement = dlg.elems(dlg.activeElement).Parent;
+        end
+
+        %% Setters
         function set.Position(dlg, val)
             dlg.fig.Position = val;
         end
 
+        %% Getters
         function val = get.Position(dlg)
             val = dlg.fig.Position;
         end
@@ -139,13 +165,34 @@ classdef modulardlg < handle
     end
 
     methods (Access = private)
+        function id = registerElement(dlg, type)
+            dlg.elems(end+1).type = type;
+            id = numel(dlg.elems);
+
+            % Assign parent
+            dlg.elems(id).Parent = dlg.activeElement;
+
+            % Assign children
+            if dlg.activeElement == 0
+                dlg.rootElems = id;
+            else
+                dlg.elems(dlg.activeElement).Children(end+1) = id;
+            end
+        end
+
+        function getElemSize(dlg)
+
+        end
+
         function draw(dlg)
             height = 0;
             width = 0;
 
             % Elements height
             for elem = dlg.elems
-                height = height + elem.hdle.Position(4);
+                if ~isempty(elem.hdle)
+                    height = height + elem.hdle.Position(4);
+                end
             end
 
             % Add margins
@@ -189,6 +236,7 @@ classdef modulardlg < handle
             dlg = util.modulardlg();
             dlg.addButton('Hey!', @(varargin)pause(0));
             dlg.addEdit('Def', 'myvar');
+            dlg.addHBox();
             dlg.addButton('Hey!', @(varargin)pause(0))
             dlg.show()
         end
