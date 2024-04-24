@@ -80,6 +80,11 @@ classdef LinkedMarker < handle
 
             % Create listener for the button up event
             obj.updtListener = addlistener(obj.inFigure, 'WindowMouseRelease', @(o,e) obj.updateMarker(o));
+
+            % Delete output argument if not needed
+            if nargout == 0
+                clear obj
+            end
         end
 
         function delete(obj)
@@ -189,7 +194,7 @@ classdef LinkedMarker < handle
             plot(ax1, xpts, ypts);
             plot(ax2, t, zpts);
 
-            LinkedMarker(ax1, ax2, [xpts; ypts]', t);
+            util.LinkedMarker(ax1, ax2, [xpts; ypts]', t)
 
             % waitfor(fig1);
             % waitfor(fig2);
