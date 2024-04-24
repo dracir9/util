@@ -39,32 +39,19 @@ classdef LinkedMarker < handle
             obj.inFigure = ancestor(inAxes,'figure','toplevel');
 
             % Create marker in inAxes
-            holdState = ishold(inAxes);
-            hold(inAxes, 'on')
-            obj.inMarker = plot(inAxes, nan, nan, 'rx', 'MarkerSize', 20);
-            % Restore hold state
-            if holdState
-                hold(outAxes, 'on')
-            else
-                hold(outAxes, 'off')
-            end
+            obj.inMarker = line(nan, nan, 'Parent', inAxes, 'Marker', 'x', 'Color', 'r', 'MarkerSize', 20);
+            obj.inMarker.Annotation.LegendInformation.IconDisplayStyle = 'off';
 
             % Create vertical marker in target axes
             obj.outMarker = gobjects(1,numel(outAxes));
             for ii = 1:numel(outAxes)
-                % Save hold state and set hold on
-                holdState = ishold(outAxes(ii));
-                hold(outAxes(ii), 'on')
-
                 % Create vertical line
-                obj.outMarker(ii) = plot(outAxes(ii), [nan nan], [outAxes(ii).YLim], 'r--', 'LineWidth', 2);
-
-                % Restore hold state
-                if holdState
-                    hold(outAxes(ii), 'on')
+                if util.getMatlabVersion >= 2018.5
+                    obj.outMarker(ii) = xline(nan, 'Parent', outAxes(ii), 'LineWidth', 2, 'Color', [0.15 0.15 0.15]);
                 else
-                    hold(outAxes(ii), 'off')
+                    obj.outMarker(ii) = line([nan nan], [outAxes(ii).YLim], 'Parent', outAxes(ii), 'LineWidth', 2, 'Color', [0.15 0.15 0.15], 'LineStyle', '--');
                 end
+                obj.outMarker(ii).Annotation.LegendInformation.IconDisplayStyle = 'off';
 
                 % Try to delete data marker when the marker is deleted
                 obj.deleteListener(ii) = addlistener(obj.outMarker(ii), 'ObjectBeingDestroyed', @(o,e)obj.outMarkerDeleted());
@@ -163,7 +150,11 @@ classdef LinkedMarker < handle
             validMarker = false;
             for ii = 1:numel(obj.outMarker)
                 if isvalid(obj.outMarker(ii))
-                    obj.outMarker(ii).XData = obj.outData(idx)*ones(1,2);
+                    if isprop(obj.outMarker(ii), 'Value')
+                        obj.outMarker(ii).Value = obj.outData(idx);
+                    else
+                        obj.outMarker(ii).XData = obj.outData(idx)*ones(1,2);
+                    end
                     validMarker = true;
                 end
             end
