@@ -1,6 +1,7 @@
 classdef LinkedMarker < handle
-    %DATAMARKER Summary of this class goes here
-    %   Detailed explanation goes here
+    %LINKEDMARKER Object that creates a linked data marker between multiple axes
+    %   When the user right clicks on the input axes the data markers are automatically updated on the
+    %   output axes
     
     properties (SetAccess = private)
         inMarker
@@ -22,12 +23,20 @@ classdef LinkedMarker < handle
     end
     
     methods
+        %LINKEDMARKER Create an instance of a LinkedMarker object
+        %   obj = LinkedMarker(inAxes, outAxes, inData, outData)
+        %
+        % Inputs:
+        %   inAxses     - Primary input axes. Must be a scalar value of type Axes
+        %   outAxes     - Output axes. Can be any number of axes provided as an array
+        %   inData      - Input data points that maps to the output data. Must be a N-by-2 matrix
+        %   outData     - Output data points that maps to the input data. Must have N elements.
         function obj = LinkedMarker(inAxes, outAxes, inData, outData)
             validateattributes(inAxes, 'matlab.graphics.axis.Axes', {'nonempty'}, 'DataMarker', 'inAxes')
             validateattributes(outAxes, 'matlab.graphics.axis.Axes', {'nonempty'}, 'DataMarker', 'outAxes')
             validateattributes(inData, 'numeric', {'nonempty', 'finite', 'real', 'ncols', 2}, 'DataMarker', 'inData')
             nrows = size(inAxes, 1);
-            validateattributes(outData, 'numeric', {'nonempty', 'finite', 'real', 'vector', 'nrows', nrows}, 'DataMarker', 'outData')
+            validateattributes(outData, 'numeric', {'nonempty', 'finite', 'real', 'vector', 'numel', nrows}, 'DataMarker', 'outData')
 
             obj.inAxes = inAxes;
             obj.inData = inData;
@@ -74,6 +83,11 @@ classdef LinkedMarker < handle
             end
         end
 
+        %DELETE Cleanup and delete object instance
+        %   delete(obj)
+        %
+        % Inputs:
+        %   obj     - LinkedMarker object handle
         function delete(obj)
             % Restore previous title
             if isvalid(obj.inAxes) && ~isnumeric(obj.prevTitle)
@@ -110,7 +124,14 @@ classdef LinkedMarker < handle
                 end
             end
         end
-        
+    end
+
+    methods (Access = private)
+        %OUTMARKERDELETED Output marker deleted event callback
+        %   outMarkerDeleted(obj) Function called when an output marker is deleted
+        %
+        % Inputs:
+        %   obj     - LinkedMarker object handle
         function outMarkerDeleted(obj)
             % Check for valid markers
             if ~any(isvalid(obj.outMarker))
@@ -119,6 +140,12 @@ classdef LinkedMarker < handle
             end
         end
 
+        %UPDATEMARKER Update output marker event callback
+        %   updateMarker(obj) Update the position of the markers
+        %
+        % Inputs:
+        %   obj     - LinkedMarker object handle
+        %   src     - Event caller handle
         function updateMarker(obj, src)
             % Right click only
             if ~strcmp(src.SelectionType, 'alt')
