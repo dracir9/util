@@ -24,20 +24,38 @@ classdef LinkedMarker < handle
     
     methods
         %LINKEDMARKER Create an instance of a LinkedMarker object
-        %   obj = LinkedMarker(inAxes, outAxes, inData, outData)
+        %   LinkedMarker(inAxes, outAxes, inData, outData)
+        %
+        %   obj = LinkedMarker(inAxes, outAxes, inData, outData) Return LinkedMarker handle
+        %
+        %   LinkedMarker(__, Name, Value)
         %
         % Inputs:
         %   inAxses     - Primary input axes. Must be a scalar value of type Axes
         %   outAxes     - Output axes. Can be any number of axes provided as an array
         %   inData      - Input data points that maps to the output data. Must be a N-by-2 matrix
         %   outData     - Output data points that maps to the input data. Must have N elements.
-        function obj = LinkedMarker(inAxes, outAxes, inData, outData)
-            validateattributes(inAxes, 'matlab.graphics.axis.Axes', {'nonempty'}, 'DataMarker', 'inAxes')
+        function obj = LinkedMarker(inAxes, outAxes, inData, outData, varargin)
+            validateattributes(inAxes, 'matlab.graphics.axis.Axes', {'scalar'}, 'DataMarker', 'inAxes')
             validateattributes(outAxes, 'matlab.graphics.axis.Axes', {'nonempty'}, 'DataMarker', 'outAxes')
             validateattributes(inData, 'numeric', {'nonempty', 'finite', 'real', 'ncols', 2}, 'DataMarker', 'inData')
-            nrows = size(inAxes, 1);
-            validateattributes(outData, 'numeric', {'nonempty', 'finite', 'real', 'vector', 'numel', nrows}, 'DataMarker', 'outData')
+            nrows = size(inData, 1);
+            validateattributes(outData, 'numeric', {'nonempty', 'finite', 'real', 'vector'}, 'DataMarker', 'outData')
+            if numel(outData) ~= nrows
+                error('Expected outData to be an array with number of elements equal to the number of rows in inData')
+            end
 
+            % Create parser
+            p = inputParser;
+            p.addParameter('Color', 'r');
+            p.addParameter('LineStyle', '--');
+            p.addParameter('LineWidth', 1.5, @(x)validateattributes(x, 'numeric', {'scalar', 'finite', 'real', 'positive'}));
+            p.addParameter('MarkerSize', 20, @(x)validateattributes(x, 'numeric', {'scalar', 'finite', 'real', 'positive'}));
+
+            % Parse name-value pairs
+            p.parse(varargin{:})
+
+            % Assign object properties
             obj.inAxes = inAxes;
             obj.inData = inData;
             obj.outData = outData;
@@ -48,17 +66,19 @@ classdef LinkedMarker < handle
             obj.inFigure = ancestor(inAxes,'figure','toplevel');
 
             % Create marker in inAxes
-            obj.inMarker = line(nan, nan, 'Parent', inAxes, 'Marker', 'x', 'Color', 'r', 'MarkerSize', 20);
-            obj.inMarker.Annotation.LegendInformation.IconDisplayStyle = 'off';
+            obj.inMarker(1) = line(nan, nan, 'Parent', inAxes, 'Marker', 'x', 'Color', p.Results.Color, 'MarkerSize', p.Results.MarkerSize, 'LineWidth', p.Results.LineWidth);
+            obj.inMarker(2) = line(nan, nan, 'Parent', inAxes, 'Marker', 'o', 'Color', p.Results.Color, 'MarkerSize', p.Results.MarkerSize, 'LineWidth', p.Results.LineWidth);
+            obj.inMarker(1).Annotation.LegendInformation.IconDisplayStyle = 'off';
+            obj.inMarker(2).Annotation.LegendInformation.IconDisplayStyle = 'off';
 
             % Create vertical marker in target axes
             obj.outMarker = gobjects(1,numel(outAxes));
             for ii = 1:numel(outAxes)
                 % Create vertical line
                 if util.getMatlabVersion >= 2018.5
-                    obj.outMarker(ii) = xline(nan, 'Parent', outAxes(ii), 'LineWidth', 2, 'Color', [0.15 0.15 0.15]);
+                    obj.outMarker(ii) = xline(nan, 'Parent', outAxes(ii), 'LineWidth', p.Results.LineWidth, 'Color', p.Results.Color, 'LineStyle', p.Results.LineStyle);
                 else
-                    obj.outMarker(ii) = line([nan nan], [outAxes(ii).YLim], 'Parent', outAxes(ii), 'LineWidth', 2, 'Color', [0.15 0.15 0.15], 'LineStyle', '--');
+                    obj.outMarker(ii) = line([nan nan], [outAxes(ii).YLim], 'Parent', outAxes(ii), 'LineWidth', p.Results.LineWidth, 'Color', p.Results.Color, 'LineStyle', p.Results.LineStyle);
                 end
                 obj.outMarker(ii).Annotation.LegendInformation.IconDisplayStyle = 'off';
 
