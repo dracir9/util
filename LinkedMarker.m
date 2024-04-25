@@ -18,8 +18,12 @@ classdef LinkedMarker < handle
         inAxes
         inFigure
 
+        outFigure = gobjects(0);
+        outAxes = cell(0);
+
         updtListener = event.listener.empty();
         deleteListener = event.listener.empty();
+        reverseListener = event.listener.empty();
     end
     
     methods
@@ -36,21 +40,22 @@ classdef LinkedMarker < handle
         %   inData      - Input data points that maps to the output data. Must be a N-by-2 matrix
         %   outData     - Output data points that maps to the input data. Must have N elements.
         function obj = LinkedMarker(inAxes, outAxes, inData, outData, varargin)
-            validateattributes(inAxes, 'matlab.graphics.axis.Axes', {'scalar'}, 'DataMarker', 'inAxes')
-            validateattributes(outAxes, 'matlab.graphics.axis.Axes', {'nonempty'}, 'DataMarker', 'outAxes')
-            validateattributes(inData, 'numeric', {'nonempty', 'finite', 'real', 'ncols', 2}, 'DataMarker', 'inData')
+            validateattributes(inAxes, 'matlab.graphics.axis.Axes', {'scalar'}, 'LinkedMarker', 'inAxes')
+            validateattributes(outAxes, 'matlab.graphics.axis.Axes', {'nonempty'}, 'LinkedMarker', 'outAxes')
+            validateattributes(inData, 'numeric', {'nonempty', 'finite', 'real', 'ncols', 2}, 'LinkedMarker', 'inData')
             nrows = size(inData, 1);
-            validateattributes(outData, 'numeric', {'nonempty', 'finite', 'real', 'vector'}, 'DataMarker', 'outData')
+            validateattributes(outData, 'numeric', {'nonempty', 'finite', 'real', 'vector'}, 'LinkedMarker', 'outData')
             if numel(outData) ~= nrows
                 error('Expected outData to be an array with number of elements equal to the number of rows in inData')
             end
 
             % Create parser
             p = inputParser;
-            p.addParameter('Color', 'r');
+            p.addParameter('Color', 'r', @(x)validatecolor(x, 'one'));
             p.addParameter('LineStyle', '--');
             p.addParameter('LineWidth', 1.5, @(x)validateattributes(x, 'numeric', {'scalar', 'finite', 'real', 'positive'}));
             p.addParameter('MarkerSize', 20, @(x)validateattributes(x, 'numeric', {'scalar', 'finite', 'real', 'positive'}));
+            p.addParameter('ReverseLink', false, @(x)validateattributes(x, 'logical', {'scalar'}));
 
             % Parse name-value pairs
             p.parse(varargin{:})
@@ -63,7 +68,7 @@ classdef LinkedMarker < handle
             obj.outMarker = gobjects(0);
 
             % Get parent figure
-            obj.inFigure = ancestor(inAxes,'figure','toplevel');
+            obj.inFigure = ancestor(inAxes,'Figure','toplevel');
 
             % Create marker in inAxes
             obj.inMarker(1) = line(nan, nan, 'Parent', inAxes, 'Marker', 'x', 'Color', p.Results.Color, 'MarkerSize', p.Results.MarkerSize, 'LineWidth', p.Results.LineWidth);
@@ -84,6 +89,11 @@ classdef LinkedMarker < handle
 
                 % Try to delete data marker when the marker is deleted
                 obj.deleteListener(ii) = addlistener(obj.outMarker(ii), 'ObjectBeingDestroyed', @(o,e)obj.outMarkerDeleted());
+
+                % Enable reverse interactions (from output axes to input axes)
+                if p.Results.ReverseLink
+                    obj.addOutAxes(outAxes(ii));
+                end
             end
 
             % Display information on the axes title
@@ -130,6 +140,12 @@ classdef LinkedMarker < handle
                 end
             end
 
+            for ii = 1:numel(obj.reverseListener)
+                if isvalid(obj.reverseListener(ii))
+                    delete(obj.reverseListener(ii));
+                end
+            end
+
             % Delete inMarkers
             for ii = 1:numel(obj.inMarker)
                 if isvalid(obj.inMarker(ii))
@@ -147,6 +163,27 @@ classdef LinkedMarker < handle
     end
 
     methods (Access = private)
+        %ADDOUTAXeS Register output axes
+        %   addOutAxes(obj) Register output axes and create listener to update the marker in reverse mode
+        %
+        % Inputs:
+        %   obj     - LinkedMarker object handle
+        %   ax      - Axes to be registered
+        function addOutAxes(obj, ax)
+            parentFig = ancestor(ax, 'Figure', 'toplevel');
+
+            outFigIdx = obj.outFigure == parentFig;
+            if isempty(obj.outFigure) || ~any(outFigIdx)
+                obj.outFigure(end+1) = parentFig;
+                obj.outAxes{end+1} = ax;
+                id = numel(obj.outFigure);
+            else
+                id = find(outFigIdx, 1);
+                obj.outAxes{id}(end+1) = ax;
+            end
+            obj.reverseListener(end+1) = addlistener(parentFig, 'WindowMouseRelease', @(o,e) obj.updateInMarker(o, id));
+        end
+
         %OUTMARKERDELETED Output marker deleted event callback
         %   outMarkerDeleted(obj) Function called when an output marker is deleted
         %
@@ -155,7 +192,7 @@ classdef LinkedMarker < handle
         function outMarkerDeleted(obj)
             % Check for valid markers
             if ~any(isvalid(obj.outMarker))
-                % If there are no valid markers remaining, delete DataMarker
+                % If there are no valid markers remaining, delete LinkedMarker
                 delete(obj);
             end
         end
@@ -187,7 +224,7 @@ classdef LinkedMarker < handle
                 end
             end
 
-            % If there are no valid markers remaining, delete DataMarker
+            % If there are no valid markers remaining, delete LinkedMarker
             if ~validMarker
                 delete(obj);
                 return
@@ -206,7 +243,74 @@ classdef LinkedMarker < handle
                 end
             end
 
-            % If there are no valid markers remaining, delete DataMarker
+            % If there are no valid markers remaining, delete LinkedMarker
+            if ~validMarker
+                delete(obj);
+            end
+        end
+
+        %UPDATEINMARKER Update input marker event callback
+        %   updateInMarker(obj) Update the position of the markers
+        %
+        % Inputs:
+        %   obj     - LinkedMarker object handle
+        %   src     - Event caller handle
+        %   id      - Index in the outAxes cell array
+        function updateInMarker(obj, src, id)
+            % Right click only
+            if ~strcmp(src.SelectionType, 'alt')
+                return
+            end
+
+            % Find axes where the cursor was pressed
+            axesGroup = obj.outAxes{id};
+            validAxes = false;
+            for ii = 1:numel(axesGroup)
+                mousePos = axesGroup(ii).CurrentPoint(1,1:2);
+                if mousePos(1) > axesGroup(ii).XLim(1) && mousePos(1) < axesGroup(ii).XLim(2) && ...
+                   mousePos(2) > axesGroup(ii).YLim(1) && mousePos(2) < axesGroup(ii).YLim(2)
+                    validAxes = true;
+                    break;
+                end
+            end
+
+            if ~validAxes
+                return
+            end
+
+            xDiff = abs(obj.outData - mousePos(1));
+            [~, idx] = min(xDiff);
+
+            % Update primary axes marker
+            validMarker = false;
+            for ii = 1:numel(obj.inMarker)
+                if isvalid(obj.inMarker(ii))
+                    obj.inMarker(ii).XData = obj.inData(idx, 1);
+                    obj.inMarker(ii).YData = obj.inData(idx, 2);
+                    validMarker = true;
+                end
+            end
+
+            % If there are no valid markers remaining, delete LinkedMarker
+            if ~validMarker
+                delete(obj);
+                return
+            end
+
+            % Update secondary axes marker
+            validMarker = false;
+            for ii = 1:numel(obj.outMarker)
+                if isvalid(obj.outMarker(ii))
+                    if isprop(obj.outMarker(ii), 'Value')
+                        obj.outMarker(ii).Value = obj.outData(idx);
+                    else
+                        obj.outMarker(ii).XData = obj.outData(idx)*ones(1,2);
+                    end
+                    validMarker = true;
+                end
+            end
+
+            % If there are no valid markers remaining, delete LinkedMarker
             if ~validMarker
                 delete(obj);
             end
