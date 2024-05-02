@@ -40,11 +40,11 @@ classdef LinkedMarker < handle
         %   inData      - Input data points that maps to the output data. Must be a N-by-2 matrix
         %   outData     - Output data points that maps to the input data. Must have N elements.
         function obj = LinkedMarker(inAxes, outAxes, inData, outData, varargin)
-            validateattributes(inAxes, 'matlab.graphics.axis.Axes', {'scalar'}, 'LinkedMarker', 'inAxes')
-            validateattributes(outAxes, 'matlab.graphics.axis.Axes', {'nonempty'}, 'LinkedMarker', 'outAxes')
-            validateattributes(inData, 'numeric', {'nonempty', 'finite', 'real', 'ncols', 2}, 'LinkedMarker', 'inData')
+            validateattributes(inAxes, {'matlab.graphics.axis.Axes'}, {'scalar'}, 'LinkedMarker', 'inAxes')
+            validateattributes(outAxes, {'matlab.graphics.axis.Axes'}, {'nonempty'}, 'LinkedMarker', 'outAxes')
+            validateattributes(inData, {'numeric'}, {'nonempty', 'finite', 'real', 'ncols', 2}, 'LinkedMarker', 'inData')
             nrows = size(inData, 1);
-            validateattributes(outData, 'numeric', {'nonempty', 'finite', 'real', 'vector'}, 'LinkedMarker', 'outData')
+            validateattributes(outData, {'numeric'}, {'nonempty', 'finite', 'real', 'vector'}, 'LinkedMarker', 'outData')
             if numel(outData) ~= nrows
                 error('Expected outData to be an array with number of elements equal to the number of rows in inData')
             end
@@ -53,9 +53,9 @@ classdef LinkedMarker < handle
             p = inputParser;
             p.addParameter('Color', 'r', @(x)validatecolor(x, 'one'));
             p.addParameter('LineStyle', '--');
-            p.addParameter('LineWidth', 1.5, @(x)validateattributes(x, 'numeric', {'scalar', 'finite', 'real', 'positive'}));
-            p.addParameter('MarkerSize', 20, @(x)validateattributes(x, 'numeric', {'scalar', 'finite', 'real', 'positive'}));
-            p.addParameter('ReverseLink', false, @(x)validateattributes(x, 'logical', {'scalar'}));
+            p.addParameter('LineWidth', 1.5, @(x)validateattributes(x, {'numeric'}, {'scalar', 'finite', 'real', 'positive'}));
+            p.addParameter('MarkerSize', 20, @(x)validateattributes(x, {'numeric'}, {'scalar', 'finite', 'real', 'positive'}));
+            p.addParameter('ReverseLink', false, @(x)validateattributes(x, {'logical'}, {'scalar'}));
 
             % Parse name-value pairs
             p.parse(varargin{:})
