@@ -5,8 +5,8 @@ classdef modulardlg < handle
     properties
         fig     matlab.ui.Figure
 
-        padding = 5;
-        margin = [5, 5, 5, 5];
+        spacing = 5;
+        padding = [5, 5, 5, 5];
         controlWidth = 125;
         controlHeight = 18;
 
@@ -24,7 +24,7 @@ classdef modulardlg < handle
     end
 
     properties (Access = private)
-        rootElems = [];
+        root = struct('type', 'VBox', 'size', [], 'Children', []);
         elems = struct('hdle', gobjects(0), 'var', '', 'type', '', 'weight', -1, 'size', [], 'Children', [], 'Parent', []);
 
         activeElement = 0;
@@ -83,6 +83,8 @@ classdef modulardlg < handle
 
             dlg.controlWidth = 125;
             dlg.controlHeight = max(18, (dlg.fontsize+6));
+
+            dlg.root.size = dlg.Position(3:4);
         end
 
         function show(dlg)
@@ -98,7 +100,7 @@ classdef modulardlg < handle
                 'style'   , 'pushbutton',...
                 'parent'  , dlg.fig,...
                 'string'  , txt,...
-                'position', [dlg.margin(1),dlg.margin(2), dlg.controlWidth/2.5, dlg.controlHeight*1.5],...
+                'position', [dlg.padding(1),dlg.padding(2), dlg.controlWidth/2.5, dlg.controlHeight*1.5],...
                 'FontSize', dlg.fontsize,...
                 'Callback', @(src, evt)cb(dlg, src, evt));
 
@@ -116,7 +118,7 @@ classdef modulardlg < handle
                 'style'   , 'edit',...
                 'parent'  , dlg.fig,...
                 'string'  , txt,...
-                'position', [dlg.margin(1),dlg.margin(2), dlg.controlWidth, dlg.controlHeight],...
+                'position', [dlg.padding(1),dlg.padding(2), dlg.controlWidth, dlg.controlHeight],...
                 'FontSize', dlg.fontsize);
 
             dlg.elems(id).var = varName;
@@ -172,57 +174,88 @@ classdef modulardlg < handle
             % Assign parent
             dlg.elems(id).Parent = dlg.activeElement;
 
+            % Set default weight
+            dlg.elems(id).weight = -1;
+
             % Assign children
             if dlg.activeElement == 0
-                dlg.rootElems = id;
+                dlg.root.Children(end+1) = id;
             else
                 dlg.elems(dlg.activeElement).Children(end+1) = id;
             end
         end
 
-        function getElemSize(dlg)
+        function elem = setElemSize(dlg, elem, maxSz)
+            elem.size = maxSz;
 
+            if numel(elem.Children) == 0
+                return
+            end
+            elemSz = zeros(numel(elem.Children), 2);
+
+            % Fixed size elements
+            fixElems = [dlg.elems(elem.Children).weight] > 0;
+
+            switch elem.type
+                case 'HBox'
+                    % Fixed width elements
+                    elemSz(fixElems, 1) = [dlg.elems(fixElems).weight];
+
+                    % Weighted width elements
+                    remWidth = elem.size(1) - sum(elemSz(fixElems, 1)) - dlg.spacing*(numel(elem.Children)-1);
+                    remWidth = max(remWidth, 0);
+                    elemSz(~fixElems, 1) = remWidth/(sum(~fixElems));
+
+                    % Set height
+                    elemSz(:, 2) = elem.size(2);
+                case 'VBox'
+                    % Fixed height elements
+                    elemSz(fixElems, 2) = [dlg.elems(fixElems).weight];
+
+                    % Weighted height elements
+                    remHeight = elem.size(2) - sum(elemSz(fixElems, 2)) - dlg.spacing*(numel(elem.Children)-1);
+                    remHeight = max(remHeight, 0);
+                    elemSz(~fixElems, 2) = remHeight/(sum(~fixElems));
+
+                    % Set width
+                    elemSz(:, 1) = elem.size(1);
+                otherwise
+                    error('Invalid type')
+            end
+
+            % Assign child sizes
+            for ii = 1:numel(elem.Children)
+                dlg.elems(elem.Children(ii)) = dlg.setElemSize(dlg.elems(elem.Children(ii)), elemSz(ii, :));
+            end
         end
 
         function draw(dlg)
-            height = 0;
-            width = 0;
+            dlg.Position(3:4) = [500, 500];
+            dlg.root = dlg.setElemSize(dlg.root, [500-dlg.padding(1)-dlg.padding(3), 500-dlg.padding(2)-dlg.padding(4)]);
+            dlg.drawElement(dlg.root, [0+dlg.padding(1), 500-dlg.padding(4)]);
+        end
 
-            % Elements height
-            for elem = dlg.elems
-                if ~isempty(elem.hdle)
-                    height = height + elem.hdle.Position(4);
+        function drawElement(dlg, elem, origin)
+            if numel(elem.Children) == 0
+                origin(2) = origin(2) - elem.size(2);
+                elem.hdle.Position = [origin, elem.size];
+            else
+                childs = dlg.elems(elem.Children);
+                step = vertcat(childs.size);
+                switch elem.type
+                    case 'HBox'
+                        step(:,1) = step(:,1) + dlg.spacing;
+                        step(:,2) = 0;
+                    case 'VBox'
+                        step(:,1) = 0;
+                        step(:,2) = step(:,2) + dlg.spacing;
                 end
-            end
+                step(:, 2) = -step(:, 2);
 
-            % Add margins
-            height = height + dlg.margin(2) + dlg.margin(4);
-
-            % Add padding
-            if ~isempty(dlg.elems)
-                height = height + dlg.padding*(numel(dlg.elems)-1);
-            end
-
-            % Elements width
-            for elem = dlg.elems
-                width = max(width, elem.hdle.Position(3));
-            end
-
-            % Add margins
-            width = width + dlg.margin(1) + dlg.margin(3);
-
-            dlg.Position(3) = max(width, dlg.minWidth);
-            dlg.Position(4) = max(height, dlg.minHeight);
-
-            % Adjust element position
-            for elem = dlg.elems
-                elem.hdle.Position(1) = (dlg.totalWidth - dlg.margin(1) - dlg.margin(3))/2 - elem.hdle.Position(3)/2;
-            end
-
-            Ypos = dlg.margin(2);
-            for elem = dlg.elems
-                elem.hdle.Position(2) = Ypos;
-                Ypos = Ypos + elem.hdle.Position(4) + dlg.padding;
+                for ii = 1:numel(childs)
+                    dlg.drawElement(childs(ii), origin);
+                    origin = origin + step(ii, :);
+                end
             end
         end
 
@@ -235,9 +268,15 @@ classdef modulardlg < handle
         function selfTest()
             dlg = util.modulardlg();
             dlg.addButton('Hey!', @(varargin)pause(0));
+            dlg.addHBox();
             dlg.addEdit('Def', 'myvar');
             dlg.addHBox();
             dlg.addButton('Hey!', @(varargin)pause(0))
+            dlg.addButton('Hey!', @(varargin)pause(0))
+            dlg.endBox();
+            dlg.addEdit('Test', 'var');
+            dlg.endBox();
+            dlg.addEdit('Final', 'var');
             dlg.show()
         end
     end
