@@ -25,9 +25,12 @@ classdef modulardlg < handle
 
     properties (Access = private)
         root = struct('type', 'VBox', 'size', [], 'Children', []);
-        elems = struct('hdle', gobjects(0), 'var', '', 'type', '', 'weight', -1, 'size', [], 'Children', [], 'Parent', []);
+        elems = struct('hdle', gobjects(0), 'type', '', 'weight', -1, 'size', [], 'Children', [], 'Parent', []);
+        outElems = struct('var', '', 'id', 0);
 
         activeElement = 0;
+
+        exitButtonID = -1;
     end
 
     properties (Constant, Access = private)
@@ -42,6 +45,7 @@ classdef modulardlg < handle
 
             % Delete all elements
             dlg.elems(:) = [];
+            dlg.outElems(:) = [];
 
             figPos = [];
             if nargin > 0
@@ -74,7 +78,7 @@ classdef modulardlg < handle
              'toolbar'         , 'none', ...       % no toolbar
              'NumberTitle'     , 'off',...
              'UserData'        , 'r',...
-             'CloseRequestFcn' , @(src, evt)close_Cb(dlg, src));% Close callback
+             'CloseRequestFcn' , @(src, evt)close_Cb(dlg));% Close callback
 
             dlg.Position = [scx, scy, dlg.minWidth, dlg.minHeight];
 
@@ -87,13 +91,21 @@ classdef modulardlg < handle
             dlg.root.size = dlg.Position(3:4);
         end
 
-        function show(dlg)
-            dlg.fig.Visible = 'on';
-            waitfor(dlg.fig, 'UserData', 's');
+        function delete(dlg)
             delete(dlg.fig)
         end
 
-        function outId = addButton(dlg, txt, cb)
+        function [answer, button] = show(dlg)
+            dlg.fig.Visible = 'on';
+            waitfor(dlg.fig, 'UserData', 's');
+
+            answer = dlg.constructAnswer();
+            button = dlg.elems(dlg.exitButtonID).hdle.String;
+
+            delete(dlg.fig)
+        end
+
+        function outId = addButton(dlg, txt, varName)
             id = dlg.registerElement('Button');
 
             dlg.elems(id).hdle = uicontrol(...
@@ -102,8 +114,9 @@ classdef modulardlg < handle
                 'string'  , txt,...
                 'position', [dlg.padding(1),dlg.padding(2), dlg.controlWidth/2.5, dlg.controlHeight*1.5],...
                 'FontSize', dlg.fontsize,...
-                'Callback', @(src, evt)cb(dlg, src, evt));
+                'Callback', @(src, evt)dlg.pushButton_Cb(id));
 
+            dlg.registerOutput(varName, id);
             dlg.draw()
 
             if nargout > 0
@@ -121,7 +134,7 @@ classdef modulardlg < handle
                 'position', [dlg.padding(1),dlg.padding(2), dlg.controlWidth, dlg.controlHeight],...
                 'FontSize', dlg.fontsize);
 
-            dlg.elems(id).var = varName;
+            dlg.registerOutput(varName, id);
 
             dlg.draw()
 
@@ -130,8 +143,32 @@ classdef modulardlg < handle
             end
         end
 
+        function outId = addOkCancel(dlg)
+            id = dlg.addHBox();
+            dlg.addButton('Ok', 'Ok');
+            dlg.addButton('Cancel', 'Cancel')
+            dlg.endBox();
+
+            if nargout > 0
+                outId = id;
+            end
+        end
+
         function outId = addHBox(dlg)
             id = dlg.registerElement('HBox');
+
+            % Set as the active element
+            dlg.activeElement = id;
+
+            dlg.draw()
+
+            if nargout > 0
+                outId = id;
+            end
+        end
+
+        function outId = addVBox(dlg)
+            id = dlg.registerElement('VBox');
 
             % Set as the active element
             dlg.activeElement = id;
@@ -183,6 +220,11 @@ classdef modulardlg < handle
             else
                 dlg.elems(dlg.activeElement).Children(end+1) = id;
             end
+        end
+
+        function registerOutput(dlg, varName, id)
+            dlg.outElems(end+1).var = varName;
+            dlg.outElems(end).id = id;
         end
 
         function elem = setElemSize(dlg, elem, maxSz)
@@ -259,25 +301,42 @@ classdef modulardlg < handle
             end
         end
 
-        function close_Cb(dlg, ~)
+        function answer = constructAnswer(dlg)
+            for ii = 1:numel(dlg.outElems)
+                if dlg.outElems(ii).id == dlg.exitButtonID
+                    val = 1;
+                else
+                    val = dlg.elems(dlg.outElems(ii).id).hdle.Value;
+                end
+                answer.(dlg.outElems(ii).var) = val;
+            end
+        end
+
+        function close_Cb(dlg)
             dlg.fig.UserData = 's';
+        end
+
+        function pushButton_Cb(dlg, id)
+            dlg.exitButtonID = id;
+            dlg.close_Cb();
         end
     end
 
     methods (Static, Hidden)
         function selfTest()
             dlg = util.modulardlg();
-            dlg.addButton('Hey!', @(varargin)pause(0));
+            dlg.addButton('Hey!', 'but1');
             dlg.addHBox();
             dlg.addEdit('Def', 'myvar');
-            dlg.addHBox();
-            dlg.addButton('Hey!', @(varargin)pause(0))
-            dlg.addButton('Hey!', @(varargin)pause(0))
+            dlg.addVBox();
+            dlg.addButton('Hey!', 'but2')
+            dlg.addButton('Hey!', 'but3')
             dlg.endBox();
             dlg.addEdit('Test', 'var');
             dlg.endBox();
-            dlg.addEdit('Final', 'var');
-            dlg.show()
+            dlg.addEdit('Final', 'var2');
+            dlg.addOkCancel();
+            [a, b] = dlg.show()
         end
     end
 end
