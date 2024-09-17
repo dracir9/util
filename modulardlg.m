@@ -100,7 +100,11 @@ classdef modulardlg < handle
             waitfor(dlg.fig, 'UserData', 's');
 
             answer = dlg.constructAnswer();
-            button = dlg.elems(dlg.exitButtonID).hdle.String;
+            if dlg.exitButtonID > 0
+                button = dlg.elems(dlg.exitButtonID).hdle.String;
+            else
+                button = '';
+            end
 
             delete(dlg.fig)
         end
@@ -125,16 +129,27 @@ classdef modulardlg < handle
         end
 
         function outId = addEdit(dlg, txt, varName)
-            id = dlg.registerElement('Edit');
+            id = dlg.addHBox();
 
-            dlg.elems(id).hdle = uicontrol(...
-                'style'   , 'edit',...
+            textId = dlg.registerElement('Text');
+
+            dlg.elems(textId).hdle = uicontrol(...
+                'style'   , 'text',...
                 'parent'  , dlg.fig,...
                 'string'  , txt,...
                 'position', [dlg.padding(1),dlg.padding(2), dlg.controlWidth, dlg.controlHeight],...
                 'FontSize', dlg.fontsize);
 
-            dlg.registerOutput(varName, id);
+            inputId = dlg.registerElement('Edit');
+
+            dlg.elems(inputId).hdle = uicontrol(...
+                'style'   , 'edit',...
+                'parent'  , dlg.fig,...
+                'position', [dlg.padding(1),dlg.padding(2), dlg.controlWidth, dlg.controlHeight],...
+                'FontSize', dlg.fontsize);
+
+            dlg.registerOutput(varName, inputId);
+            dlg.endBox();
 
             dlg.draw()
 
