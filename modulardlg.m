@@ -1,6 +1,6 @@
 classdef modulardlg < handle
-    %PROMPTDLG Summary of this class goes here
-    %   Detailed explanation goes here
+    %MODULARDLG Object for easy input dialog creation
+    %   This object creates a fully configurable input dialog
     
     properties
         fig     matlab.ui.Figure
@@ -25,7 +25,7 @@ classdef modulardlg < handle
 
     properties (Access = private)
         root = struct('type', 'VBox', 'size', [], 'Children', []);
-        elems = struct('hdle', gobjects(0), 'type', '', 'weight', -1, 'size', [], 'Children', [], 'Parent', []);
+        elems = struct('hdle', gobjects(0), 'type', '', 'weight', 1, 'size', [], 'Children', [], 'Parent', []);
         outElems = struct('var', '', 'id', 0);
 
         activeElement = 0;
@@ -39,7 +39,7 @@ classdef modulardlg < handle
     end
     
     methods
-        function dlg = modulardlg(varargin)
+        function dlg = modulardlg()
             %PROMPTDLG Construct an instance of this class
             %   Detailed explanation goes here
 
@@ -47,27 +47,7 @@ classdef modulardlg < handle
             dlg.elems(:) = [];
             dlg.outElems(:) = [];
 
-            figPos = [];
-            if nargin > 0
-                if isgraphics(varargin{1}, 'figure')
-                    figPos = varargin{1}.Position;
-                elseif isnumeric(varargin{1}) && numel(varargin{1}, 2)
-                    figPos = varargin{1};
-                end
-            end
-
-            % get screensize and determine proper figure position
-            if isempty(dlg.fig)
-                scz = get(0, 'ScreenSize');               % put the window in the center of the screen
-                scx = round(scz(3)/2 - dlg.minWidth/2);    % (this will usually work fine, except on some  
-                scy = round(scz(4)/2 - dlg.minHeight/2);    % multi-monitor setups)   
-            else
-                scx = round(figPos(1) - dlg.minWidth/2);
-                scy = round(figPos(2) - dlg.minHeight/2);
-            end
-
             dlg.fig = figure(...
-             'position'        , [scx, scy, dlg.minWidth, dlg.minHeight],...% figure position
              'visible'         , 'off',...         % Hide the dialog while in construction
              'backingstore'    , 'off',...         % DON'T save a copy in the background         
              'resize'          , 'off', ...        % disable resizing
@@ -79,8 +59,6 @@ classdef modulardlg < handle
              'NumberTitle'     , 'off',...
              'UserData'        , 'r',...
              'CloseRequestFcn' , @(src, evt)close_Cb(dlg));% Close callback
-
-            dlg.Position = [scx, scy, dlg.minWidth, dlg.minHeight];
 
             dlg.bgcolor = get(0, 'defaultUicontrolBackgroundColor');
             dlg.fontsize = get(0, 'defaultuicontrolfontsize');
@@ -96,6 +74,16 @@ classdef modulardlg < handle
         end
 
         function [answer, button] = show(dlg)
+            % SHOW Show the dialog and wait for the user
+            %   show(dlg)
+            %
+            % Input:
+            %   dlg     - modulardlg object
+            %
+            % Return:
+            %   answer  - Structure with the user input values
+            %   button  - String of the button pressed when closing the dialog
+
             dlg.fig.Visible = 'on';
             waitfor(dlg.fig, 'UserData', 's');
 
@@ -109,10 +97,19 @@ classdef modulardlg < handle
             delete(dlg.fig)
         end
 
-        function outId = addButton(dlg, txt, varName)
-            id = dlg.registerElement('Button');
-
-            dlg.elems(id).hdle = uicontrol(...
+        function outId = addButton(dlg, txt, varName, varargin)
+            % ADDBUTTON
+            %   addButton(dlg, txt, varName)
+            %   addButton(__, Name, Value)
+            %
+            % Input:
+            %   dlg     - modulardlg object
+            %   txt     - Text displayed inside the button
+            %   varName - Name of the variable where the state of the button will be stored
+            % Return:
+            %   outId   - Element ID
+            id = dlg.registerElement('Button', varargin{:});
+            hdle = uicontrol(...
                 'style'   , 'pushbutton',...
                 'parent'  , dlg.fig,...
                 'string'  , txt,...
@@ -120,6 +117,7 @@ classdef modulardlg < handle
                 'FontSize', dlg.fontsize,...
                 'Callback', @(src, evt)dlg.pushButton_Cb(id));
 
+            dlg.elems(id).hdle = hdle;
             dlg.registerOutput(varName, id);
             dlg.draw()
 
@@ -159,9 +157,11 @@ classdef modulardlg < handle
         end
 
         function outId = addOkCancel(dlg)
-            id = dlg.addHBox();
-            dlg.addButton('Ok', 'Ok');
-            dlg.addButton('Cancel', 'Cancel')
+            id = dlg.addHBox('size', [80, 30], 'weight', 0);
+            dlg.addSpacer();
+            dlg.addButton('Ok', 'Ok', 'size', [80, 30], 'weight', 0);
+            dlg.addButton('Cancel', 'Cancel', 'size', [80, 30], 'weight', 0)
+            dlg.addSpacer();
             dlg.endBox();
 
             if nargout > 0
@@ -169,8 +169,8 @@ classdef modulardlg < handle
             end
         end
 
-        function outId = addHBox(dlg)
-            id = dlg.registerElement('HBox');
+        function outId = addHBox(dlg, varargin)
+            id = dlg.registerElement('HBox', varargin{:});
 
             % Set as the active element
             dlg.activeElement = id;
@@ -182,8 +182,8 @@ classdef modulardlg < handle
             end
         end
 
-        function outId = addVBox(dlg)
-            id = dlg.registerElement('VBox');
+        function outId = addVBox(dlg, varargin)
+            id = dlg.registerElement('VBox', varargin{:});
 
             % Set as the active element
             dlg.activeElement = id;
@@ -197,6 +197,15 @@ classdef modulardlg < handle
 
         function endBox(dlg)
             dlg.activeElement = dlg.elems(dlg.activeElement).Parent;
+        end
+
+        function outId = addSpacer(dlg, varargin)
+            id = dlg.registerElement('Spacer', varargin{:});
+            dlg.draw()
+
+            if nargout > 0
+                outId = id;
+            end
         end
 
         %% Setters
@@ -219,22 +228,42 @@ classdef modulardlg < handle
     end
 
     methods (Access = private)
-        function id = registerElement(dlg, type)
+        function parseInput(varargin)
+        end
+
+        function id = registerElement(dlg, type, varargin)
+            % Create new entry in the array and assign type
             dlg.elems(end+1).type = type;
             id = numel(dlg.elems);
 
             % Assign parent
             dlg.elems(id).Parent = dlg.activeElement;
 
-            % Set default weight
-            dlg.elems(id).weight = -1;
-
-            % Assign children
+            % Assign new element to the current active element
             if dlg.activeElement == 0
                 dlg.root.Children(end+1) = id;
             else
                 dlg.elems(dlg.activeElement).Children(end+1) = id;
             end
+
+            % Set additional parameters
+            switch dlg.elems(id).type
+                case {'Edit'}
+                    validateattributes(varargin{1}, {'matlab.ui.control.UIControl'}, {'scalar'});
+                    dlg.elems(id).hdle = varargin{1};
+                    varargin(1) = [];
+            end
+
+            % Create parser
+            p = inputParser();
+            p.addParameter('weight', 1, @(x)validateattributes(x, {'numeric'}, {'scalar', 'finite', 'real'}));
+            p.addParameter('size', [0 0], @(x)validateattributes(x, {'numeric'}, {'vector', 'finite', 'real', 'numel', 2, 'nonnegative'}));
+
+            p.parse(varargin{:});
+
+            % Set properties
+            dlg.elems(id).weight = p.Results.weight;
+            dlg.elems(id).size = p.Results.size;
         end
 
         function registerOutput(dlg, varName, id)
@@ -248,31 +277,28 @@ classdef modulardlg < handle
             if numel(elem.Children) == 0
                 return
             end
-            elemSz = zeros(numel(elem.Children), 2);
+            elemSz = vertcat(dlg.elems(elem.Children).size);
+
+            childWeight = [dlg.elems(elem.Children).weight];
+            totalWeight = sum(childWeight);
 
             % Fixed size elements
-            fixElems = [dlg.elems(elem.Children).weight] > 0;
+            fixElems = childWeight == 0;
 
             switch elem.type
                 case 'HBox'
-                    % Fixed width elements
-                    elemSz(fixElems, 1) = [dlg.elems(fixElems).weight];
-
                     % Weighted width elements
                     remWidth = elem.size(1) - sum(elemSz(fixElems, 1)) - dlg.spacing*(numel(elem.Children)-1);
                     remWidth = max(remWidth, 0);
-                    elemSz(~fixElems, 1) = remWidth/(sum(~fixElems));
+                    elemSz(~fixElems, 1) = remWidth/totalWeight * childWeight(~fixElems);
 
                     % Set height
                     elemSz(:, 2) = elem.size(2);
                 case 'VBox'
-                    % Fixed height elements
-                    elemSz(fixElems, 2) = [dlg.elems(fixElems).weight];
-
                     % Weighted height elements
                     remHeight = elem.size(2) - sum(elemSz(fixElems, 2)) - dlg.spacing*(numel(elem.Children)-1);
                     remHeight = max(remHeight, 0);
-                    elemSz(~fixElems, 2) = remHeight/(sum(~fixElems));
+                    elemSz(~fixElems, 2) = remHeight/totalWeight * childWeight(~fixElems);
 
                     % Set width
                     elemSz(:, 1) = elem.size(1);
@@ -287,9 +313,8 @@ classdef modulardlg < handle
         end
 
         function draw(dlg)
-            dlg.Position(3:4) = [500, 500];
-            dlg.root = dlg.setElemSize(dlg.root, [500-dlg.padding(1)-dlg.padding(3), 500-dlg.padding(2)-dlg.padding(4)]);
-            dlg.drawElement(dlg.root, [0+dlg.padding(1), 500-dlg.padding(4)]);
+            dlg.root = dlg.setElemSize(dlg.root, [dlg.Position(3)-dlg.padding(1)-dlg.padding(3), dlg.Position(4)-dlg.padding(2)-dlg.padding(4)]);
+            dlg.drawElement(dlg.root, [dlg.padding(1), dlg.Position(4)-dlg.padding(4)]);
         end
 
         function drawElement(dlg, elem, origin)
@@ -343,7 +368,7 @@ classdef modulardlg < handle
             dlg.addButton('Hey!', 'but1');
             dlg.addHBox();
             dlg.addEdit('Def', 'myvar');
-            dlg.addVBox();
+            dlg.addVBox('weight', 2);
             dlg.addButton('Hey!', 'but2')
             dlg.addButton('Hey!', 'but3')
             dlg.endBox();
