@@ -1,6 +1,21 @@
 classdef Logging < handle
-    %LOGGING Summary of this class goes here
-    %   Detailed explanation goes here
+    %LOGGING Object for managing and printing log messages to multiple outputs and configurable level of verbosity
+    %   log = Logging() Creates a new Logging object that prints messages to the default command window
+    %       See the constructor documentation for more information.
+    %
+    %   Log messages can be sent to other outputs by creating a new output device with the method
+    %   addOutput(). See the documentation for this function for more information.
+    %
+    %   Use any of the following methods to print a message to the attached outputs
+    %   - error()   Maximum priority message.
+    %   - warning()
+    %   - info()
+    %   - debug()
+    %   - trace()
+    %
+    % Logging properties:
+    % R/W   defaultLevel    - Default log level for NEW outputs
+    % R     loggers         - Logger objects attached to this Logging instance
 
     properties
         %defaultLevel - Default log level for NEW outputs
@@ -18,8 +33,7 @@ classdef Logging < handle
     
     methods
         function obj = Logging(varargin)
-            %LOGGING Initialize the infrastructure to log messages to
-            % various outputs
+            %LOGGING Initialize the infrastructure to log messages to various outputs
             %   Detailed explanation goes here
             if nargin == 0
                 obj.addOutput('cmd');
