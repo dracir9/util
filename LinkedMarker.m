@@ -40,6 +40,10 @@ classdef LinkedMarker < handle
         %   inData      - Input data points that maps to the output data. Must be a N-by-2 matrix
         %   outData     - Output data points that maps to the input data. Must have N elements.
         function obj = LinkedMarker(inAxes, outAxes, inData, outData, varargin)
+            if nargin == 0
+                obj = obj.empty();
+                return
+            end
             validateattributes(inAxes, {'matlab.graphics.axis.Axes'}, {'scalar'}, 'LinkedMarker', 'inAxes')
             validateattributes(outAxes, {'matlab.graphics.axis.Axes'}, {'nonempty'}, 'LinkedMarker', 'outAxes')
             validateattributes(inData, {'numeric'}, {'nonempty', 'finite', 'real', 'ncols', 2}, 'LinkedMarker', 'inData')
@@ -263,10 +267,11 @@ classdef LinkedMarker < handle
             end
 
             % Find axes where the cursor was pressed
-            axesGroup = obj.outAxes{id};
+            axesGroup = obj.outAxes{id}; % Get axes in a figure
             validAxes = false;
             for ii = 1:numel(axesGroup)
                 mousePos = axesGroup(ii).CurrentPoint(1,1:2);
+                % Check if mouse position is within the axes
                 if mousePos(1) > axesGroup(ii).XLim(1) && mousePos(1) < axesGroup(ii).XLim(2) && ...
                    mousePos(2) > axesGroup(ii).YLim(1) && mousePos(2) < axesGroup(ii).YLim(2)
                     validAxes = true;
