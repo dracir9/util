@@ -99,8 +99,8 @@ classdef GridLayout < handle
             % Get insets in pixels
             insetList = vertcat(gl.gridAxes(1:gl.outAxID).TightInset);
 
-            % If tightInset variable is the same, return to prevent recurring calls
-            if max(abs(insetList(:) - gl.oldInsets(:))) > 0.5
+            % If tightInset variable has changed, update
+            if max(abs(insetList(:) - gl.oldInsets(:))) >= 1
                 disp(src.UserData)
                 gl.updateAxGrid(insetList);
             end
@@ -112,7 +112,6 @@ classdef GridLayout < handle
 
             % Update grid
             gl.updateAxGrid(insetList);
-            disp('m')
         end
 
         function updateAxGrid(gl, insetList)
@@ -131,7 +130,7 @@ classdef GridLayout < handle
             end
             
             for iteration = 1:10
-                axInset(1:numel(insetList)) = insetList(:);
+                axInset(1:numel(insetList)) = insetList';
     
                 % Calculate spacing between cells
                 Xspacing = max(axInset(3, :, 1:end-1) + axInset(1, :, 2:end), gl.Spacing);
@@ -142,11 +141,11 @@ classdef GridLayout < handle
     
                 % Calculate border space arround axes
                 Xinset = [max(axInset(1, :, 1)), max(axInset(3, :, end))] + gl.Padding;
-                Yinset = [max(axInset(4, 1, :)), max(axInset(2, end, :))] + gl.Padding;
+                Yinset = [max(axInset(2, 1, :)), max(axInset(4, end, :))] + gl.Padding;
     
                 % Calculate axes sizes
-                axHeight = (maxSize(2) - Xspacing*(gl.rows-1) - sum(Xinset))/gl.rows;
-                axWidth = (maxSize(1) - Yspacing*(gl.cols-1) - sum(Yinset))/gl.cols;
+                axWidth = (maxSize(1) - Xspacing*(gl.cols-1) - sum(Xinset))/gl.cols;
+                axHeight = (maxSize(2) - Yspacing*(gl.rows-1) - sum(Yinset))/gl.rows;
     
                 id = 0;
                 for jj = 1:gl.cols
@@ -182,14 +181,15 @@ classdef GridLayout < handle
     methods (Static)
         function selfTest()
             fig = figure();
-            gl = util.GridLayout(fig, 2, 3, 'Spacing', 0, 'Padding', 0);
 
-            gl.nextCell();
-            gl.nextCell();
-            gl.nextCell();
-            gl.nextCell();
-            gl.nextCell();
-            gl.nextCell();
+            nCol = randi(6);
+            nRow = randi(6);
+
+            gl = util.GridLayout(fig, nRow, nCol, 'Spacing', 50, 'Padding', 10);
+
+            for ii = 1:(nCol*nRow)
+                gl.nextCell();
+            end
         end
     end
 end
