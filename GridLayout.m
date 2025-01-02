@@ -110,19 +110,9 @@ classdef GridLayout < handle
             % Get insets in pixels
             insetList = vertcat(gl.gridAxes(1:gl.outAxID).TightInset);
 
-            % Diable axes events
-            for ii = 1:numel(gl.axListeners)
-                gl.axListeners(ii).Enabled = false;
-            end
-
             % Update grid
             gl.updateAxGrid(insetList);
             disp('m')
-
-            % Enable axes events
-            for ii = 1:numel(gl.axListeners)
-                gl.axListeners(ii).Enabled = true;
-            end
         end
 
         function updateAxGrid(gl, insetList)
@@ -134,43 +124,58 @@ classdef GridLayout < handle
 
             % Expand missing elements
             axInset = zeros(4, gl.rows, gl.cols);
+
+            % Diable axes events
+            for ii = 1:numel(gl.axListeners)
+                gl.axListeners(ii).Enabled = false;
+            end
             
-            axInset(1:numel(insetList)) = insetList(:);
-
-            % Calculate spacing between cells
-            Xspacing = max(axInset(3, :, 1:end-1) + axInset(1, :, 2:end), gl.Spacing);
-            Xspacing = max(Xspacing(:));
-
-            Yspacing = max(axInset(2, 1:end-1, :) + axInset(4, 2:end, :), gl.Spacing);
-            Yspacing = max(Yspacing(:));
-
-            % Calculate border space arround axes
-            Xinset = [max(axInset(1, :, 1)), max(axInset(3, :, end))] + gl.Padding;
-            Yinset = [max(axInset(4, 1, :)), max(axInset(2, end, :))] + gl.Padding;
-
-            % Calculate axes sizes
-            axHeight = (maxSize(2) - Xspacing*(gl.rows-1) - sum(Xinset))/gl.rows;
-            axWidth = (maxSize(1) - Yspacing*(gl.cols-1) - sum(Yinset))/gl.cols;
-
-            id = 0;
-            for jj = 1:gl.cols
-                for ii = 1:gl.rows
-                    if id >= gl.outAxID
-                        break
+            for iteration = 1:10
+                axInset(1:numel(insetList)) = insetList(:);
+    
+                % Calculate spacing between cells
+                Xspacing = max(axInset(3, :, 1:end-1) + axInset(1, :, 2:end), gl.Spacing);
+                Xspacing = max(Xspacing(:));
+    
+                Yspacing = max(axInset(2, 1:end-1, :) + axInset(4, 2:end, :), gl.Spacing);
+                Yspacing = max(Yspacing(:));
+    
+                % Calculate border space arround axes
+                Xinset = [max(axInset(1, :, 1)), max(axInset(3, :, end))] + gl.Padding;
+                Yinset = [max(axInset(4, 1, :)), max(axInset(2, end, :))] + gl.Padding;
+    
+                % Calculate axes sizes
+                axHeight = (maxSize(2) - Xspacing*(gl.rows-1) - sum(Xinset))/gl.rows;
+                axWidth = (maxSize(1) - Yspacing*(gl.cols-1) - sum(Yinset))/gl.cols;
+    
+                id = 0;
+                for jj = 1:gl.cols
+                    for ii = 1:gl.rows
+                        if id >= gl.outAxID
+                            break
+                        end
+                        id = id+1;
+                        
+                        gl.gridAxes(ii, jj).Position = [...
+                            Xinset(1) + axWidth*(jj-1) + Xspacing*(jj-1), ...
+                            Yinset(1) + axHeight*(gl.rows-ii) + Yspacing*(gl.rows-ii), ...
+                            axWidth, ...
+                            axHeight];
                     end
-                    id = id+1;
-                    
-                    gl.gridAxes(ii, jj).Position = [...
-                        Xinset(1) + axWidth*(jj-1) + Xspacing*(jj-1), ...
-                        Yinset(1) + axHeight*(gl.rows-ii) + Yspacing*(gl.rows-ii), ...
-                        axWidth, ...
-                        axHeight];
+                end
+                
+                gl.oldInsets = insetList;
+
+                insetList = vertcat(gl.gridAxes(1:gl.outAxID).TightInset);
+                if all(insetList(:) == gl.oldInsets(:))
+                    break;
                 end
             end
 
-            % all(vertcat(gl.gridAxes(1:gl.outAxID).TightInset) == insetList, 'all')
-            
-            gl.oldInsets = insetList;
+            % Enable axes events
+            for ii = 1:numel(gl.axListeners)
+                gl.axListeners(ii).Enabled = true;
+            end
         end
     end
 
