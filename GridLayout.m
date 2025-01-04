@@ -45,7 +45,13 @@ classdef GridLayout < handle
             validateattributes(m, {'numeric'}, {'scalar', 'finite', 'real', 'positive'}, 'GridLayout', 'm')
             validateattributes(n, {'numeric'}, {'scalar', 'finite', 'real', 'positive'}, 'GridLayout', 'n')
 
-            gl.Parent = uipanel('Parent', Parent, 'BorderType', 'none', 'Units', 'normalized');
+            if isprop(Parent, 'Color')
+                color = Parent.Color;
+            elseif isprop(Parent, 'BackgroundColor')
+                color = Parent.BackgroundColor;
+            end
+
+            gl.Parent = uipanel('Parent', Parent, 'BorderType', 'none', 'Units', 'normalized', 'BackgroundColor', color);
             gl.rows = m;
             gl.cols = n;
 
@@ -60,6 +66,7 @@ classdef GridLayout < handle
             % Set parameters
             gl.Spacing = p.Results.Spacing;
             gl.Padding = p.Results.Padding;
+            gl.outAxID = 0;
 
             gl.gridAxes = gobjects(m, n);
             gl.Parent.SizeChangedFcn = @gl.sizeChanged_Cb;
@@ -106,6 +113,10 @@ classdef GridLayout < handle
         end
 
         function sizeChanged_Cb(gl, ~, ~)
+            if gl.outAxID == 0
+                return
+            end
+
             % Get insets in pixels
             insetList = vertcat(gl.gridAxes(1:gl.outAxID).TightInset);
 
@@ -196,7 +207,7 @@ classdef GridLayout < handle
             fig2 = figure();
             fig3 = figure();
             fig4 = figure();
-            fig5 = figure();
+            fig5 = figure('Color', 'w');
 
             gl = util.GridLayout(fig1, 1, 1, 'Spacing', 50, 'Padding', 10);
             gl.nextCell();
