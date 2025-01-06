@@ -181,7 +181,7 @@ classdef GridLayout < handle
     
                 % Calculate border space arround axes
                 Xinset = [max(axInset(1, :, 1)), max(axInset(3, :, end))] + gl.Padding;
-                Yinset = [max(axInset(2, 1, :)), max(axInset(4, end, :))] + gl.Padding;
+                Yinset = [max(axInset(2, end, :)), max(axInset(4, 1, :))] + gl.Padding;
     
                 % Calculate axes sizes
                 axWidth = max((maxSize(1) - Xspacing*(gl.cols-1) - sum(Xinset))/gl.cols, 0);
@@ -243,7 +243,7 @@ classdef GridLayout < handle
             gl.nextCell();
             gl.nextCell();
 
-            gl = util.GridLayout(fig3, 3, 1, 'Spacing', 50, 'Padding', 10);
+            gl = util.GridLayout(fig3, 3, 1, 'Spacing', 8, 'Padding', 8);
             gl.nextCell();
             gl.nextCell();
             gl.nextCell();
