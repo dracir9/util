@@ -1,6 +1,15 @@
 classdef GridLayout < handle
-    %GRIDLAYOUT Summary of this class goes here
-    %   Detailed explanation goes here
+    %GRIDLAYOUT GridLayout class to create a grid of axes
+    %
+    %  gl = GridLayout(Parent, m, n) creates a new GridLayout object with m rows and n columns in the specified parent object.
+    %
+    % GridLayout properties:
+    %  R/W  Parent      - Parent object where the GridLayout will be created
+    %  R/w  Spacing     - Spacing between cells in pixels
+    %  R/W  Padding     - Padding around the grid in pixels
+    %
+    % Author: Ricard Bitriá Ribes
+    % Date: December 2024
     
     properties
         Parent
@@ -16,15 +25,26 @@ classdef GridLayout < handle
         cols = 1
         rows = 1
 
-        oldInsets = []
-
         outAxID = 0
     end
     
     methods
         function gl = GridLayout(Parent, m, n, varargin)
-            %GRIDLAYOUT Construct an instance of this class
-            %   Detailed explanation goes here
+            %GRIDLAYOUT Create a new GridLayout object
+            %
+            %   gl = GRIDLAYOUT(Parent, m, n) creates a new GridLayout object with m rows and n columns in the specified parent object.
+            %   gl = GRIDLAYOUT(Parent, m, n, Name, Value) creates a new GridLayout object with m rows and n columns in the specified parent object with the specified properties.
+            %
+            % Inputs:
+            %   Parent      - Parent object where the GridLayout will be created
+            %   m           - Number of rows
+            %   n           - Number of columns
+            %   varargin    - Name-Value pair arguments to set properties:
+            %            > Spacing: Spacing between cells in pixels (default: 10)
+            %            > Padding: Padding around the grid in pixels (default: 10)
+            %
+            % Outputs:
+            %   gl          - GridLayout object
 
             % If first arg is not a graphics element attempt to use the current object or create a new figure
             if ~isa(Parent, 'matlab.graphics.Graphics')
@@ -77,8 +97,17 @@ classdef GridLayout < handle
         end
         
         function ax = nextCell(gl, varargin)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
+            %NEXTCELL Create a new axes in the next cell of the grid layout
+            %
+            %   ax = NEXTCELL(gl) creates a new axes in the next cell of the grid layout and returns the axes handle.
+            %   ax = NEXTCELL(gl, Name, Value) creates a new axes in the next cell of the grid layout with the specified properties.
+            %
+            % Inputs:
+            %   gl          - GridLayout object
+            %   varargin    - Name-Value pair arguments to create axes
+            %
+            % Outputs:
+            %   ax          - Axes handle
 
             if gl.outAxID <= gl.cols*gl.rows
                 gl.outAxID = gl.outAxID + 1;
@@ -86,30 +115,23 @@ classdef GridLayout < handle
                 error('All cells have already been created')
             end
 
-            ax = axes(varargin{:}, 'Parent', gl.Parent, 'Units', 'pixels');
+            % Create axes
+            % 'LooseInset' hidden property needs to be set to 0 to properly trigger OuterPositionChanged event
+            ax = axes(varargin{:}, 'Parent', gl.Parent, 'Units', 'pixels', 'LooseInset', [0 0 0 0]);
             
             gl.gridAxes(gl.outAxID) = ax;
-
-            % Initialize oldInset
-            gl.oldInsets(gl.outAxID, 1:4) = ax.TightInset;
 
             % Adjust axes grid at least once
             gl.sizeChanged_Cb();
             
             % Create listener to auto-update axes grid
-            gl.axListeners(gl.outAxID) = addlistener(ax, 'MarkedClean', @gl.axesUpdated_Cb);
+            gl.axListeners(gl.outAxID) = addlistener(ax, 'OuterPositionChanged', @gl.axesUpdated_Cb);
         end
     end
 
     methods (Access = private)
         function axesUpdated_Cb(gl, ~, ~)
-            % Get insets in pixels
-            insetList = vertcat(gl.gridAxes(1:gl.outAxID).TightInset);
-
-            % If tightInset variable has changed, update
-            if max(abs(insetList(:) - gl.oldInsets(:))) >= 1
-                gl.updateAxGrid(insetList);
-            end
+            gl.updateAxGrid();
         end
 
         function sizeChanged_Cb(gl, ~, ~)
@@ -117,14 +139,14 @@ classdef GridLayout < handle
                 return
             end
 
+            % Update grid
+            gl.updateAxGrid();
+        end
+
+        function updateAxGrid(gl)
             % Get insets in pixels
             insetList = vertcat(gl.gridAxes(1:gl.outAxID).TightInset);
 
-            % Update grid
-            gl.updateAxGrid(insetList);
-        end
-
-        function updateAxGrid(gl, insetList)
             % Get parent position and size in pixels
             parentPos = getpixelposition(gl.Parent);
 
@@ -181,10 +203,10 @@ classdef GridLayout < handle
                     end
                 end
                 
-                gl.oldInsets = insetList;
+                oldInsets = insetList;
 
                 insetList = vertcat(gl.gridAxes(1:gl.outAxID).TightInset);
-                if all(insetList(:) == gl.oldInsets(:))
+                if all(insetList(:) == oldInsets(:))
                     break;
                 end
             end
@@ -203,6 +225,10 @@ classdef GridLayout < handle
 
     methods (Static)
         function selfTest()
+            %SELFTEST Test the GridLayout class
+            %
+            %   SELFTEST() runs a test of the GridLayout class.
+
             fig1 = figure();
             fig2 = figure();
             fig3 = figure();
@@ -236,7 +262,7 @@ classdef GridLayout < handle
             nCol = 3+randi(3);
             nRow = 3+randi(3);
 
-            gl = util.GridLayout(fig5, nCol, nRow, 'Spacing', 50, 'Padding', 10);
+            gl = util.GridLayout(fig5, nCol, nRow, 'Spacing', 0, 'Padding', 0);
 
             for ii = 1:(nCol*nRow)
                 gl.nextCell();
