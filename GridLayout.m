@@ -125,7 +125,7 @@ classdef GridLayout < handle
             gl.sizeChanged_Cb();
             
             % Create listener to auto-update axes grid
-            gl.axListeners(gl.outAxID) = addlistener(ax, 'OuterPositionChanged', @gl.axesUpdated_Cb);
+            gl.axListeners(gl.outAxID) = addlistener(ax, 'SizeChanged', @gl.axesUpdated_Cb);
         end
     end
 
@@ -200,6 +200,8 @@ classdef GridLayout < handle
                             Yinset(1) + axHeight*(gl.rows-ii) + Yspacing*(gl.rows-ii), ...
                             axWidth, ...
                             axHeight];
+                        
+                        gl.gridAxes(ii, jj).ActivePositionProperty = 'outerPosition';
                     end
                 end
                 
