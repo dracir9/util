@@ -26,6 +26,8 @@ classdef GridLayout < handle
         rows = 1
 
         outAxID = 0
+        
+        useOuterPos = false;
     end
     
     methods
@@ -89,6 +91,13 @@ classdef GridLayout < handle
             gl.outAxID = 0;
 
             gl.gridAxes = gobjects(m, n);
+            
+            if verLessThan('matlab', '9.8')
+                gl.useOuterPos = true;
+            else
+                gl.useOuterPos = false;
+            end
+            
             gl.Parent.SizeChangedFcn = @gl.sizeChanged_Cb;
         end
 
@@ -125,7 +134,11 @@ classdef GridLayout < handle
             gl.sizeChanged_Cb();
             
             % Create listener to auto-update axes grid
-            gl.axListeners(gl.outAxID) = addlistener(ax, 'SizeChanged', @gl.axesUpdated_Cb);
+            if verLessThan('matlab', '9.8')
+                gl.axListeners(gl.outAxID) = addlistener(ax, 'SizeChanged', @gl.axesUpdated_Cb);
+            else
+                gl.axListeners(gl.outAxID) = addlistener(ax, 'OuterPositionChanged', @gl.axesUpdated_Cb);
+            end
         end
     end
 
@@ -201,7 +214,9 @@ classdef GridLayout < handle
                             axWidth, ...
                             axHeight];
                         
-                        gl.gridAxes(ii, jj).ActivePositionProperty = 'outerPosition';
+                        if gl.useOuterPos
+                            gl.gridAxes(ii, jj).ActivePositionProperty = 'outerPosition';
+                        end
                     end
                 end
                 
