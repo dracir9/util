@@ -186,6 +186,19 @@ classdef Logging < handle
             obj.checkLevel(val);
             obj.defaultLevel = val;
         end
+
+        function newCallback = makeCallback(obj, callback, varargin)
+            args = varargin;
+            newCallback = @(src, evt)executeCallback(obj, callback, src, evt, args);
+
+            function executeCallback(log, clbk, s, e, arguments)
+                try
+                    clbk(s, e, arguments{:});
+                catch e
+                    log.error(e);
+                end
+            end
+        end
     end
 
     methods (Static)
