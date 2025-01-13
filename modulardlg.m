@@ -138,13 +138,12 @@ classdef modulardlg < handle
                 'position', [dlg.padding(1),dlg.padding(2), dlg.controlWidth, dlg.controlHeight],...
                 'FontSize', dlg.fontsize);
 
-            inputId = dlg.registerElement('Edit');
-
-            dlg.elems(inputId).hdle = uicontrol(...
-                'style'   , 'edit',...
-                'parent'  , dlg.fig,...
-                'position', [dlg.padding(1),dlg.padding(2), dlg.controlWidth, dlg.controlHeight],...
-                'FontSize', dlg.fontsize);
+            inputId = dlg.registerElement('Edit', ...
+                uicontrol(...
+                    'style'   , 'edit',...
+                    'parent'  , dlg.fig,...
+                    'position', [dlg.padding(1),dlg.padding(2), dlg.controlWidth, dlg.controlHeight],...
+                    'FontSize', dlg.fontsize));
 
             dlg.registerOutput(varName, inputId);
             dlg.endBox();
@@ -231,7 +230,7 @@ classdef modulardlg < handle
         function parseInput(varargin)
         end
 
-        function id = registerElement(dlg, type, varargin)
+        function id = registerElement(dlg, type, hdle, varargin)
             % Create new entry in the array and assign type
             dlg.elems(end+1).type = type;
             id = numel(dlg.elems);
@@ -249,9 +248,12 @@ classdef modulardlg < handle
             % Set additional parameters
             switch dlg.elems(id).type
                 case {'Edit'}
-                    validateattributes(varargin{1}, {'matlab.ui.control.UIControl'}, {'scalar'});
-                    dlg.elems(id).hdle = varargin{1};
-                    varargin(1) = [];
+                    validateattributes(hdle, {'matlab.ui.control.UIControl'}, {'scalar'});
+                    dlg.elems(id).hdle = hdle;
+                otherwise
+                    if nargin > 2
+                        varargin = [hdle, varargin];
+                    end
             end
 
             % Create parser
