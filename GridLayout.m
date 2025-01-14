@@ -10,24 +10,36 @@ classdef GridLayout < handle
     %
     % Author: Ricard Bitriá Ribes
     % Date: December 2024
-    
-    properties
+
+    properties (Dependent)
         Parent
 
-        Spacing = 10
-        Padding = 10
+        Widths
+        Heights
+        Spacing
+        Padding
+    end
+
+    properties (SetAccess = private)
+        cols = 1
+        rows = 1
     end
 
     properties (Access = private)
+        Panel
         gridAxes = gobjects(0,1)
         axListeners = event.listener.empty()
-
-        cols = 1
-        rows = 1
 
         outAxID = 0
         
         useOuterPos = false;
+
+        % Internal properties
+        Spacing_ = 10
+        Padding_ = 10
+
+        Widths_ = -1
+        Heights_ = -1
     end
     
     methods
@@ -73,7 +85,7 @@ classdef GridLayout < handle
                 color = Parent.BackgroundColor;
             end
 
-            gl.Parent = uipanel('Parent', Parent, 'BorderType', 'none', 'Units', 'normalized', 'BackgroundColor', color);
+            gl.Panel = uipanel('Parent', Parent, 'BorderType', 'none', 'Units', 'normalized', 'BackgroundColor', color);
             gl.rows = m;
             gl.cols = n;
 
@@ -86,8 +98,8 @@ classdef GridLayout < handle
             p.parse(varargin{:})
 
             % Set parameters
-            gl.Spacing = p.Results.Spacing;
-            gl.Padding = p.Results.Padding;
+            gl.Spacing_ = p.Results.Spacing;
+            gl.Padding_ = p.Results.Padding;
             gl.outAxID = 0;
 
             gl.gridAxes = gobjects(m, n);
@@ -98,7 +110,7 @@ classdef GridLayout < handle
                 gl.useOuterPos = false;
             end
             
-            gl.Parent.SizeChangedFcn = @gl.sizeChanged_Cb;
+            gl.Panel.SizeChangedFcn = @gl.sizeChanged_Cb;
         end
 
         function delete(~)
@@ -126,7 +138,7 @@ classdef GridLayout < handle
 
             % Create axes
             % 'LooseInset' hidden property needs to be set to 0 to properly trigger OuterPositionChanged event
-            ax = axes(varargin{:}, 'Parent', gl.Parent, 'Units', 'pixels', 'LooseInset', [0 0 0 0]);
+            ax = axes(varargin{:}, 'Parent', gl.Panel, 'Units', 'pixels', 'LooseInset', [0 0 0 0]);
             
             gl.gridAxes(gl.outAxID) = ax;
 
@@ -139,6 +151,64 @@ classdef GridLayout < handle
             else
                 gl.axListeners(gl.outAxID) = addlistener(ax, 'OuterPositionChanged', @gl.axesUpdated_Cb);
             end
+        end
+
+        % Getters and setters
+        function value = get.Parent(gl)
+            value = gl.Panel.Parent;
+        end
+
+        function value = get.Widths(gl)
+            value = gl.Widths_;
+        end
+
+        function value = get.Heights(gl)
+            value = gl.Heights_;
+        end
+
+        function value = get.Spacing(gl)
+            value = gl.Spacing_;
+        end
+
+        function value = get.Padding(gl)
+            value = gl.Padding_;
+        end
+
+        function set.Parent(gl, value)
+            validateattributes(value, {'matlab.ui.Figure', 'matlab.ui.container.Panel'}, {'scalar'}, 'GridLayout', 'Parent')
+            gl.Panel.Parent = value;
+
+            if isprop(value, 'Color')
+                color = value.Color;
+            elseif isprop(value, 'BackgroundColor')
+                color = value.BackgroundColor;
+            end
+
+            gl.Panel.BackgroundColor = color;
+        end
+
+        function set.Widths(gl, value)
+            validateattributes(value, {'numeric'}, {'vector', 'numel', gl.cols, 'finite', 'real', 'positive'}, 'GridLayout', 'Widths')
+            gl.Widths_ = value;
+            gl.updateAxGrid();
+        end
+
+        function set.Heights(gl, value)
+            validateattributes(value, {'numeric'}, {'vector', 'numel', gl.rows, 'finite', 'real', 'positive'}, 'GridLayout', 'Heights')
+            gl.Heights_ = value;
+            gl.updateAxGrid();
+        end
+
+        function set.Spacing(gl, value)
+            validateattributes(value, {'numeric'}, {'scalar', 'finite', 'real', 'nonnegative'}, 'GridLayout', 'Spacing')
+            gl.Spacing_ = value;
+            gl.updateAxGrid();
+        end
+
+        function set.Padding(gl, value)
+            validateattributes(value, {'numeric'}, {'scalar', 'finite', 'real', 'nonnegative'}, 'GridLayout', 'Padding')
+            gl.Padding_ = value;
+            gl.updateAxGrid();
         end
     end
 
@@ -161,7 +231,7 @@ classdef GridLayout < handle
             insetList = vertcat(gl.gridAxes(1:gl.outAxID).TightInset);
 
             % Get parent position and size in pixels
-            parentPos = getpixelposition(gl.Parent);
+            parentPos = getpixelposition(gl.Panel);
 
             % Get maximum size available
             maxSize = parentPos(3:4);
@@ -180,21 +250,21 @@ classdef GridLayout < handle
                 % Calculate spacing between cells
                 if gl.cols > 1
                     Xspacing = axInset(3, :, 1:end-1) + axInset(1, :, 2:end);
-                    Xspacing = max(Xspacing(:)) + gl.Spacing;
+                    Xspacing = max(Xspacing(:)) + gl.Spacing_;
                 else
                     Xspacing = 0;
                 end
     
                 if gl.rows > 1
                     Yspacing = axInset(2, 1:end-1, :) + axInset(4, 2:end, :);
-                    Yspacing = max(Yspacing(:)) + gl.Spacing;
+                    Yspacing = max(Yspacing(:)) + gl.Spacing_;
                 else
                     Yspacing = 0;
                 end
     
                 % Calculate border space arround axes
-                Xinset = [max(axInset(1, :, 1)), max(axInset(3, :, end))] + gl.Padding;
-                Yinset = [max(axInset(2, end, :)), max(axInset(4, 1, :))] + gl.Padding;
+                Xinset = [max(axInset(1, :, 1)), max(axInset(3, :, end))] + gl.Padding_;
+                Yinset = [max(axInset(2, end, :)), max(axInset(4, 1, :))] + gl.Padding_;
     
                 % Calculate axes sizes
                 axWidth = max((maxSize(1) - Xspacing*(gl.cols-1) - sum(Xinset))/gl.cols, 0);
@@ -284,6 +354,12 @@ classdef GridLayout < handle
             for ii = 1:(nCol*nRow)
                 gl.nextCell();
             end
+
+            gl.Spacing = 10;
+            gl.Padding = 20;
+
+            p = uipanel('Parent', fig5, 'Units', 'normalized', 'Position', [0.5 0 0.5 1], 'BackgroundColor', 'r');
+            gl.Parent = p;
         end
     end
 end
