@@ -93,6 +93,8 @@ classdef GridLayout < handle
             p = inputParser;
             p.addParameter('Spacing', 10, @(x)validateattributes(x, {'numeric'}, {'scalar', 'finite', 'real', 'nonnegative'}));
             p.addParameter('Padding', 10, @(x)validateattributes(x, {'numeric'}, {'scalar', 'finite', 'real', 'nonnegative'}));
+            p.addParameter('Widths', -ones(1,n), @(x)validateattributes(x, {'numeric'}, {'vector', 'numel', n, 'finite', 'real'}));
+            p.addParameter('Heights', -ones(1,m), @(x)validateattributes(x, {'numeric'}, {'vector', 'numel', m, 'finite', 'real'}));
 
             % Parse name-value pairs
             p.parse(varargin{:})
@@ -100,6 +102,8 @@ classdef GridLayout < handle
             % Set parameters
             gl.Spacing_ = p.Results.Spacing;
             gl.Padding_ = p.Results.Padding;
+            gl.Widths_ = p.Results.Widths;
+            gl.Heights_ = p.Results.Heights;
             gl.outAxID = 0;
 
             gl.gridAxes = gobjects(m, n);
@@ -267,8 +271,21 @@ classdef GridLayout < handle
                 Yinset = [max(axInset(2, end, :)), max(axInset(4, 1, :))] + gl.Padding_;
     
                 % Calculate axes sizes
-                axWidth = max((maxSize(1) - Xspacing*(gl.cols-1) - sum(Xinset))/gl.cols, 0);
-                axHeight = max((maxSize(2) - Yspacing*(gl.rows-1) - sum(Yinset))/gl.rows, 0);
+                fixedWidth = sum(gl.Widths_(gl.Widths_ > 0));
+                widthWeight = -sum(gl.Widths_(gl.Widths_ < 0));
+                fixedHeight = sum(gl.Heights_(gl.Heights_ > 0));
+                heightWeight = -sum(gl.Heights_(gl.Heights_ < 0));
+                
+                % Calculate width and height per wheigth unit
+                minXunit = max((maxSize(1) - Xspacing*(gl.cols-1) - sum(Xinset) - fixedWidth)/widthWeight, 0);
+                minYunit = max((maxSize(2) - Yspacing*(gl.rows-1) - sum(Yinset) - fixedHeight)/heightWeight, 0);
+                
+                axWidth = gl.Widths_;
+                axWidth(axWidth < 0) = -axWidth(axWidth < 0)*minXunit;
+                Xoffset = cumsum(axWidth);
+                axHeight = gl.Heights_;
+                axHeight(axHeight < 0) = -axHeight(axHeight < 0)*minYunit;
+                Yoffset = fliplr(cumsum(fliplr(axHeight)));
     
                 id = 0;
                 for jj = 1:gl.cols
@@ -279,10 +296,10 @@ classdef GridLayout < handle
                         id = id+1;
                         
                         gl.gridAxes(ii, jj).Position = [...
-                            Xinset(1) + axWidth*(jj-1) + Xspacing*(jj-1), ...
-                            Yinset(1) + axHeight*(gl.rows-ii) + Yspacing*(gl.rows-ii), ...
-                            axWidth, ...
-                            axHeight];
+                            Xinset(1) + Xoffset(jj) + Xspacing*(jj-1), ...
+                            Yinset(1) + Yoffset(ii) + Yspacing*(gl.rows-ii), ...
+                            axWidth(jj), ...
+                            axHeight(ii)];
                         
                         if gl.useOuterPos
                             gl.gridAxes(ii, jj).ActivePositionProperty = 'outerPosition';
