@@ -192,13 +192,13 @@ classdef GridLayout < handle
         end
 
         function set.Widths(gl, value)
-            validateattributes(value, {'numeric'}, {'vector', 'numel', gl.cols, 'finite', 'real', 'positive'}, 'GridLayout', 'Widths')
+            validateattributes(value, {'numeric'}, {'vector', 'numel', gl.cols, 'finite', 'real'}, 'GridLayout', 'Widths')
             gl.Widths_ = value;
             gl.updateAxGrid();
         end
 
         function set.Heights(gl, value)
-            validateattributes(value, {'numeric'}, {'vector', 'numel', gl.rows, 'finite', 'real', 'positive'}, 'GridLayout', 'Heights')
+            validateattributes(value, {'numeric'}, {'vector', 'numel', gl.rows, 'finite', 'real'}, 'GridLayout', 'Heights')
             gl.Heights_ = value;
             gl.updateAxGrid();
         end
@@ -282,10 +282,10 @@ classdef GridLayout < handle
                 
                 axWidth = gl.Widths_;
                 axWidth(axWidth < 0) = -axWidth(axWidth < 0)*minXunit;
-                Xoffset = cumsum(axWidth);
+                Xoffset = cumsum([0 axWidth]);
                 axHeight = gl.Heights_;
                 axHeight(axHeight < 0) = -axHeight(axHeight < 0)*minYunit;
-                Yoffset = fliplr(cumsum(fliplr(axHeight)));
+                Yoffset = fliplr([0 cumsum(fliplr(axHeight(2:end)))]);
     
                 id = 0;
                 for jj = 1:gl.cols
@@ -334,24 +334,25 @@ classdef GridLayout < handle
             %   SELFTEST() runs a test of the GridLayout class.
 
             fig1 = figure();
-            fig2 = figure();
-            fig3 = figure();
-            fig4 = figure();
-            fig5 = figure('Color', 'w');
 
             gl = util.GridLayout(fig1, 1, 1, 'Spacing', 50, 'Padding', 10);
             gl.nextCell();
 
+            fig2 = figure();
             gl = util.GridLayout(fig2, 1, 3, 'Spacing', 50, 'Padding', 10);
             gl.nextCell();
             gl.nextCell();
             gl.nextCell();
+            gl.Widths = [100, -1, -2];
 
+            fig3 = figure();
             gl = util.GridLayout(fig3, 3, 1, 'Spacing', 8, 'Padding', 8);
             gl.nextCell();
             gl.nextCell();
             gl.nextCell();
+            gl.Heights = [-1, 100, -2];
 
+            fig4 = figure();
             gl = util.GridLayout(fig4, 3, 3, 'Spacing', 50, 'Padding', 10);
             gl.nextCell();
             gl.nextCell();
@@ -366,6 +367,7 @@ classdef GridLayout < handle
             nCol = 3+randi(3);
             nRow = 3+randi(3);
 
+            fig5 = figure('Color', 'w');
             gl = util.GridLayout(fig5, nCol, nRow, 'Spacing', 0, 'Padding', 0);
 
             for ii = 1:(nCol*nRow)
