@@ -46,6 +46,7 @@ classdef GridLayout < handle
         function gl = GridLayout(Parent, m, n, varargin)
             %GRIDLAYOUT Create a new GridLayout object
             %
+            %   gl = GRIDLAYOUT(m, n) creates a new GridLayout object with m rows and n columns in the specified parent object.
             %   gl = GRIDLAYOUT(Parent, m, n) creates a new GridLayout object with m rows and n columns in the specified parent object.
             %   gl = GRIDLAYOUT(Parent, m, n, Name, Value) creates a new GridLayout object with m rows and n columns in the specified parent object with the specified properties.
             %
