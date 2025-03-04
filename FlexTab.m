@@ -46,7 +46,7 @@ classdef FlexTab < handle
 
         BorderType_ = 'none' % backing for BorderType
         TabWidth_ = [] % backing for TabWidth
-        TabHeight_ = -0.1 % backing for TabHeight
+        TabHeight_ = 35 % backing for TabHeight
 
         Selection_ = 1 % backing for Selection
         TabTitles_ = cell(0, 1) % backing for TabTitles
@@ -382,6 +382,27 @@ classdef FlexTab < handle
 
             obj.mainPanel_.Position = value;
         end
+
+        function set.SelectionChangedFcn(obj, value)
+            % Check
+            if ischar(value) || isa(value, 'string') % string
+                % OK
+            elseif isa(value, 'function_handle') && ...
+                    isscalar(value) % function handle
+                % OK
+            elseif iscell(value) && ndims(value) == 2 && ...
+                    size(value, 1) == 1 && size(value, 2) > 0 && ...
+                    isa(value{1}, 'function_handle' ) && ...
+                    isscalar(value{1}) %#ok<ISMAT> % cell callback
+                % OK
+            else
+                error('FlexTab:InvalidPropertyValue', ...
+                    'Property ''SelectionChangedFcn'' must be a valid callback.')
+            end
+
+            % Set
+            obj.SelectionChangedFcn = value;
+        end
     end
 
     methods
@@ -414,16 +435,16 @@ classdef FlexTab < handle
                 error('FlexTab:InvalidPropertyValue', 'Property ''Enable'' must be ''on'' or ''off''')
             end
 
+            tabIdx = numel(obj.Children) + 1;
+
             % Create tab
             tab = uipanel('Parent', obj.mainPanel_, 'Units', 'normalized', 'BackgroundColor', color, 'Visible', 'on', ...
                 'BorderType', 'none', 'HighlightColor', 'k');
 
-            uistack(tab, 'bottom')
-
             % Create tab icon
             tabIcon = uicontainer('Parent', obj.mainPanel_, 'Units', 'normalized', ...
                 'BackgroundColor', color, ...
-                'ButtonDownFcn', @(~, ~)obj.switchTab(numel(obj.Children) + 1));
+                'ButtonDownFcn', @(~, ~)obj.switchTab(tabIdx));
 
             label = uicontrol('Parent', tabIcon, 'Style', 'text', 'String', title, ...
                 'BackgroundColor', color, 'ForegroundColor', obj.ForegroundColor_, 'FontName', obj.FontName_, ...
@@ -431,30 +452,32 @@ classdef FlexTab < handle
                 'HorizontalAlignment', 'center', 'Units', 'pixels', ...
                 'Enable', enable, 'HandleVisibility', 'off', 'HitTest', 'off');
 
-            uistack(tabIcon, 'bottom')
+            uistack([tab, tabIcon], 'bottom')
             
             tabIcon.SizeChangedFcn = @(~, ~)centerText(label, tabIcon);
 
             % Add tab to list
-            obj.Children(end + 1) = tab;
+            obj.Children(tabIdx) = tab;
 
             % Add tab icon to list
-            obj.tabIconList_(end + 1) = tabIcon;
+            obj.tabIconList_(tabIdx) = tabIcon;
 
             % Set tab title
-            obj.TabTitles_{end + 1} = title;
+            obj.TabTitles_{tabIdx} = title;
 
             % Set tab enable
-            obj.TabEnables_{end + 1} = p.Results.Enable;
+            obj.TabEnables_{tabIdx} = p.Results.Enable;
 
             % Set tab color
-            obj.TabColor_(end + 1, :) = color;
+            obj.TabColor_(tabIdx, :) = color;
 
             % Set tab width
-            obj.TabWidth_(end + 1) = width;
+            obj.TabWidth_(tabIdx) = width;
 
             % Redraw tabs
-            obj.redrawTabs()
+            obj.redrawTabs();
+
+            obj.switchTab(tabIdx);
 
             function centerText(txt, parent)
                 bo = hgconvertunits(ancestor(parent, 'figure'), ...
@@ -484,29 +507,71 @@ classdef FlexTab < handle
             tabWidth(tabWidth < 0) = widthUnit*tabWidth(tabWidth < 0);
             xPos = cumsum([0 tabWidth(1:end-1)]);
 
-            if obj.TabHeight_ < 0
-                tabHeight = -panelSz(4) * obj.TabHeight_;
-            else
-                tabHeight = obj.TabHeight_;
-            end
+            availHeight = panelSz(4) - sum(obj.TabHeight_(obj.TabHeight > 0));
+            heightUnit = -availHeight; % / sum(obj.TabHeight_(obj.TabHeight < 0));
+            tabHeight = ones(size(obj.Children)) * obj.TabHeight_;
+            tabHeight(tabHeight < 0) = heightUnit*tabHeight(tabHeight < 0);
+            yPos = panelSz(4) - tabHeight(1);
 
-            tabHeight = tabHeight - 1;
+            % Add a little padding around the not-selected tabs
+            padding = 6;
+            tabWidth(1:end ~= obj.Selection_) = tabWidth(1:end ~= obj.Selection_) - padding;
+            tabHeight(1:end ~= obj.Selection_) = tabHeight(1:end ~= obj.Selection_) - padding;
+            xPos(1:end ~= obj.Selection_) = xPos(1:end ~= obj.Selection_) + padding/2;
 
             % Set divider line position
-            obj.divLine_.Position = [0 panelSz(4)-tabHeight-1 panelSz(3) 1];
+            obj.divLine_.Position = [0 yPos-1 panelSz(3) 1];
 
             % Set tab icon positions
             for ii = 1:numel(obj.tabIconList_)
                 obj.tabIconList_(ii).Units = 'pixels';
-                obj.tabIconList_(ii).Position = [xPos(ii) panelSz(4)-tabHeight tabWidth(ii) tabHeight];
+                obj.tabIconList_(ii).Position = [xPos(ii) yPos tabWidth(ii) tabHeight(ii)];
                 obj.tabIconList_(ii).Units = 'normalized';
             end
 
             % Set tab positions
             for ii = 1:numel(obj.Children)
                 obj.Children(ii).Units = 'pixels';
-                obj.Children(ii).Position(4) = panelSz(4)-tabHeight-1;
+                obj.Children(ii).Position(4) = yPos-1;
                 obj.Children(ii).Units = 'normalized';
+            end
+        end
+
+        function switchTab(obj, idx)
+            % Switch tab
+            %   obj.switchTab(idx) switches to the tab at the specified index
+
+            % Set tab visibility
+            for ii = 1:numel(obj.Children)
+                if ii == idx
+                    obj.Children(ii).Visible = 'on';
+                else
+                    obj.Children(ii).Visible = 'off';
+                end
+            end
+
+            % Set tab callback
+            for ii = 1:numel(obj.tabIconList_)
+                if ii == idx
+                    obj.tabIconList_(ii).ButtonDownFcn = '';
+                else
+                    obj.tabIconList_(ii).ButtonDownFcn = @(~, ~)obj.switchTab(ii);
+                end
+            end
+
+            % Set selection
+            obj.Selection_ = idx;
+
+            % Call selection change callback
+            callback = obj.SelectionChangedFcn;
+            if ischar(callback) && isequal(callback, '')
+                % do nothing
+            elseif ischar(callback)
+                feval(callback, source, eventData)
+            elseif isa(callback, 'function_handle')
+                callback(source, eventData)
+            elseif iscell(callback)
+                feval(callback{1}, source, eventData, callback{2:end})
             end
         end
     end
@@ -523,8 +588,8 @@ classdef FlexTab < handle
                 'FontName', 'Arial', 'FontSize', 12, 'FontWeight', 'bold', 'FontUnits', 'points', ...
                 'BorderType', 'etchedin', 'HighlightColor', [1 1 1], 'ShadowColor', [1 1 1]);
 
-            tab1.addTab('gTg');
-            tab1.addTab('Tab 2', 'Color', [1 0 0]);
+            tab1.addTab('gTg', 'Width', 100);
+            tab1.addTab('Tab 2', 'Color', [1 0 0], 'Width', -1);
         end
     end
 end
