@@ -89,6 +89,7 @@ classdef FlexTab < handle
                 {'nonnegative', 'ncols', 3, 'nrows', 1, 'ndims', 2, 'real', 'finite', '<=', 1})); % border highlight color [RGB]
             p.addParameter('ShadowColor', obj.ShadowColor_, @(x)validateattributes(x, {'numeric'}, ...
                 {'nonnegative', 'ncols', 3, 'nrows', 1, 'ndims', 2, 'real', 'finite', '<=', 1})); % border shadow color [RGB]
+            p.addParameter('TabHeight', obj.TabHeight_, @(x)validateattributes(x, {'numeric'}, {'scalar', 'real', '>=', -1, 'finite'})); % tab height
 
             % Parse name-value pairs
             p.parse(varargin{:});
@@ -103,6 +104,7 @@ classdef FlexTab < handle
             obj.BorderType_ = p.Results.BorderType;
             obj.HighlightColor_ = p.Results.HighlightColor;
             obj.ShadowColor_ = p.Results.ShadowColor;
+            obj.TabHeight_ = p.Results.TabHeight;
 
             try
                 obj.mainPanel_ = uipanel('Parent', parent, 'BorderType', obj.BorderType_, ...
@@ -407,7 +409,7 @@ classdef FlexTab < handle
     end
 
     methods
-        function addTab(obj, title, varargin)
+        function tab = addTab(obj, title, varargin)
             % Add a tab
             %   obj.addTab(title) adds a tab with the specified title
             %   obj.addTab(title, 'PropertyName', 'PropertyValue', ...) adds a tab with the specified title and properties
@@ -415,10 +417,10 @@ classdef FlexTab < handle
             % Create parser
             p = inputParser;
             p.addRequired('title', @(x)validateattributes(x, {'char'}, {'scalartext'})); % tab title
-            p.addOptional('Color', get(0, 'DefaultUitabBackgroundColor'), @(x)validateattributes(x, {'numeric'}, ...
+            p.addParameter('Color', get(0, 'DefaultUitabBackgroundColor'), @(x)validateattributes(x, {'numeric'}, ...
                 {'nonnegative', 'ncols', 3, 'nrows', 1, 'ndims', 2, 'real', 'finite', '<=', 1})); % tab panel color [RGB]
-            p.addOptional('Width', -1, @(x)validateattributes(x, {'numeric'}, {'scalar', 'real', 'finite'})); % tab width
-            p.addOptional('Enable', 'on', @(x)validateattributes(x, {'char'}, {'scalartext'})); % tab enable state
+            p.addParameter('Width', -1, @(x)validateattributes(x, {'numeric'}, {'scalar', 'real', 'finite'})); % tab width
+            p.addParameter('Enable', 'on', @(x)validateattributes(x, {'char'}, {'scalartext'})); % tab enable state
 
             % Parse name-value pairs
             p.parse(title, varargin{:});
