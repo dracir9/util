@@ -36,7 +36,6 @@ classdef FlexTab < handle
     properties( Access = private )
         mainPanel_ % main panel
         tabIconList_ = matlab.ui.control.UIControl.empty() % Tab icon list
-        divLine_ = matlab.ui.control.UIControl.empty() % Divider line
 
         ForegroundColor_ = get(0, 'DefaultUitabForegroundColor') % backing for ForegroundColor
         BackgroundColor_ = get(0, 'DefaultUitabBackgroundColor') % backing for BackgroundColor
@@ -54,8 +53,8 @@ classdef FlexTab < handle
 
         % FontAngle_ = get( 0, 'DefaultUicontrolFontAngle' ) % backing for FontAngle
         FontName_ = get(0, 'DefaultUicontrolFontName') % backing for FontName
-        FontSize_ = get(0, 'DefaultUicontrolFontSize') % backing for FontSize
-        FontWeight_ = get(0, 'DefaultUicontrolFontWeight') % backing for FontWeight
+        FontSize_ = get(0, 'DefaultUicontrolFontSize')*1.2 % backing for FontSize
+        FontWeight_ = 'bold' % backing for FontWeight
         FontUnits_ = get(0, 'DefaultUicontrolFontUnits') % backing for FontUnits
     end
     
@@ -112,11 +111,6 @@ classdef FlexTab < handle
             catch e
                 error('FlexTab:InvalidParent', 'Invalid parent object: %s', e.message);
             end
-
-            % Initialize layout
-            obj.divLine_ = uicontrol(obj.mainPanel_, 'Style', 'text', 'BackgroundColor', 'k', ...
-                'HitTest', 'off', 'HandleVisibility', 'off', 'Units', 'pixels', ...
-                'Position', [0 -1 1 1]);
 
             % Set callbacks
             obj.mainPanel_.SizeChangedFcn = @(~, ~)obj.redrawTabs();
@@ -294,11 +288,18 @@ classdef FlexTab < handle
         function set.TabColor(obj, value)
             validateattributes(value, {'numeric'}, {'nonnegative', 'ncols', 3, 'ndims', 2, 'real', 'finite', '<=', 1});
 
-            assert(isequal(size(value, 1), numel(obj.Children)), ...
+            assert(size(value, 1) <= numel(obj.Children) && size(value, 1) > 0, ...
                 'FlexTab:InvalidPropertyValue', ...
-                'Property ''TabColor'' must be a n-by-3 matrix of RGB values, one per tab.')
+                'Property ''TabColor'' must be a matrix of size 1-by-3 or N-by-3, where N is the number of tabs.')
+
+            % Fill missing colors with the last color
+            if size(value, 1) < numel(obj.Children)
+                value = [value; repmat(value(end, :), numel(obj.Children) - size(value, 1), 1)];
+            end
 
             obj.TabColor_ = value;
+
+            obj.redrawTabs();
         end
 
         function value = get.FontName(obj)
@@ -427,11 +428,7 @@ classdef FlexTab < handle
             color = p.Results.Color;
             width = p.Results.Width;
 
-            if strcmp(p.Results.Enable, 'on')
-                enable = 'inactive';
-            elseif strcmp(p.Results.Enable, 'off')
-                enable = 'off';
-            else
+            if ~strcmp(p.Results.Enable, 'on') && ~strcmp(p.Results.Enable, 'off')
                 error('FlexTab:InvalidPropertyValue', 'Property ''Enable'' must be ''on'' or ''off''')
             end
 
@@ -439,22 +436,16 @@ classdef FlexTab < handle
 
             % Create tab
             tab = uipanel('Parent', obj.mainPanel_, 'Units', 'normalized', 'BackgroundColor', color, 'Visible', 'on', ...
-                'BorderType', 'none', 'HighlightColor', 'k');
+                'BorderType', 'beveledin', 'HighlightColor', obj.HighlightColor_);
 
             % Create tab icon
-            tabIcon = uicontainer('Parent', obj.mainPanel_, 'Units', 'normalized', ...
-                'BackgroundColor', color, ...
-                'ButtonDownFcn', @(~, ~)obj.switchTab(tabIdx));
-
-            label = uicontrol('Parent', tabIcon, 'Style', 'text', 'String', title, ...
+            tabIcon = uicontrol('Parent', obj.mainPanel_, 'Style', 'pushbutton', 'String', title, ...
                 'BackgroundColor', color, 'ForegroundColor', obj.ForegroundColor_, 'FontName', obj.FontName_, ...
                 'FontSize', obj.FontSize_, 'FontWeight', obj.FontWeight_, 'FontUnits', obj.FontUnits_, ...
-                'HorizontalAlignment', 'center', 'Units', 'pixels', ...
-                'Enable', enable, 'HandleVisibility', 'off', 'HitTest', 'off');
+                'HorizontalAlignment', 'center', 'Units', 'normalized', ...
+                'Enable', 'inactive', 'ButtonDownFcn', @(~, ~)obj.switchTab(tabIdx));
 
-            uistack([tab, tabIcon], 'bottom')
-            
-            tabIcon.SizeChangedFcn = @(~, ~)centerText(label, tabIcon);
+            uistack(tabIcon, 'bottom')
 
             % Add tab to list
             obj.Children(tabIdx) = tab;
@@ -478,19 +469,6 @@ classdef FlexTab < handle
             obj.redrawTabs();
 
             obj.switchTab(tabIdx);
-
-            function centerText(txt, parent)
-                bo = hgconvertunits(ancestor(parent, 'figure'), ...
-                    [0 0 1 1], 'normalized', 'pixels', parent ); % bounds
-                e = txt.Extent;
-
-                x = 1 + bo(3)/2 - e(3)/2;
-                w = e(3);
-                y = bo(4)/2 - e(4)/2;
-                h = e(4);
-
-                txt.Position = [x y w h];
-            end
         end
 
         function redrawTabs(obj)
@@ -498,42 +476,61 @@ classdef FlexTab < handle
             %   obj.redrawTabs() redraws the tabs
 
             % Get main panel size
-            panelSz = getpixelposition(obj.mainPanel_);
+            panelSz = hgconvertunits(ancestor(obj.mainPanel_, 'figure'), ...
+                    [0 0 1 1], 'normalized', 'pixels', obj.mainPanel_); % bounds
 
             % Available width
             availWidth = panelSz(3) - sum(obj.TabWidth_(obj.TabWidth_ > 0));
             widthUnit = availWidth / sum(obj.TabWidth_(obj.TabWidth_ < 0));
-            tabWidth = obj.TabWidth_;
-            tabWidth(tabWidth < 0) = widthUnit*tabWidth(tabWidth < 0);
-            xPos = cumsum([0 tabWidth(1:end-1)]);
+            iconWidth = obj.TabWidth_;
+            iconWidth(iconWidth < 0) = widthUnit*iconWidth(iconWidth < 0);
+            xPos = cumsum([1 iconWidth(1:end-1)]);
 
             availHeight = panelSz(4) - sum(obj.TabHeight_(obj.TabHeight > 0));
             heightUnit = -availHeight; % / sum(obj.TabHeight_(obj.TabHeight < 0));
-            tabHeight = ones(size(obj.Children)) * obj.TabHeight_;
-            tabHeight(tabHeight < 0) = heightUnit*tabHeight(tabHeight < 0);
-            yPos = panelSz(4) - tabHeight(1);
+            iconHeight = ones(size(obj.Children)) * obj.TabHeight_;
+            iconHeight(iconHeight < 0) = heightUnit*iconHeight(iconHeight < 0);
+            tabHeight = panelSz(4) - iconHeight(1);
+            yPos = tabHeight - 0;
+            iconHeight = iconHeight + 1;
 
             % Add a little padding around the not-selected tabs
             padding = 6;
-            tabWidth(1:end ~= obj.Selection_) = tabWidth(1:end ~= obj.Selection_) - padding;
-            tabHeight(1:end ~= obj.Selection_) = tabHeight(1:end ~= obj.Selection_) - padding;
+            iconWidth(1:end ~= obj.Selection_) = iconWidth(1:end ~= obj.Selection_) - padding;
+            iconHeight(1:end ~= obj.Selection_) = iconHeight(1:end ~= obj.Selection_) - padding;
             xPos(1:end ~= obj.Selection_) = xPos(1:end ~= obj.Selection_) + padding/2;
-
-            % Set divider line position
-            obj.divLine_.Position = [0 yPos-1 panelSz(3) 1];
-
-            % Set tab icon positions
-            for ii = 1:numel(obj.tabIconList_)
-                obj.tabIconList_(ii).Units = 'pixels';
-                obj.tabIconList_(ii).Position = [xPos(ii) yPos tabWidth(ii) tabHeight(ii)];
-                obj.tabIconList_(ii).Units = 'normalized';
-            end
 
             % Set tab positions
             for ii = 1:numel(obj.Children)
                 obj.Children(ii).Units = 'pixels';
-                obj.Children(ii).Position(4) = yPos-1;
+                obj.Children(ii).Position(4) = tabHeight;
                 obj.Children(ii).Units = 'normalized';
+
+                if ii == obj.Selection_
+                    uistack(obj.Children(ii), 'top')
+                end
+            end
+
+            % Set tab icon positions
+            for ii = 1:numel(obj.tabIconList_)
+                obj.tabIconList_(ii).Units = 'pixels';
+                sz = [xPos(ii) yPos iconWidth(ii) iconHeight(ii)];
+                obj.tabIconList_(ii).Position = sz;
+                obj.tabIconList_(ii).Units = 'normalized';
+
+                % Create tab icon image
+                Isz = floor(sz(3:4));
+                Idat = permute(repmat(obj.TabColor_(ii, :), Isz(2), 1, Isz(1)),[1,3,2]);
+
+                % Add border
+                Idat(1,:,:) = permute(repmat(obj.ShadowColor_, 1, 1, Isz(1)),[1,3,2]);
+                Idat(:,[1,end],:) = permute(repmat(obj.ShadowColor_, Isz(2), 1, 2),[1,3,2]);
+                
+                obj.tabIconList_(ii).CData = Idat;
+
+                if ii == obj.Selection_
+                    uistack(obj.tabIconList_(ii), 'top')
+                end
             end
         end
 
@@ -562,6 +559,8 @@ classdef FlexTab < handle
             % Set selection
             obj.Selection_ = idx;
 
+            obj.redrawTabs();
+
             % Call selection change callback
             callback = obj.SelectionChangedFcn;
             if ischar(callback) && isequal(callback, '')
@@ -577,19 +576,22 @@ classdef FlexTab < handle
     end
 
     methods (Static)
-        function selfTest()
+        function tb = selfTest()
             %SELFTEST Test the FlexTab class
             %
             %   SELFTEST() runs a test of the FlexTab class.
 
             fig1 = figure();
 
-            tab1 = util.FlexTab(fig1, 'ForegroundColor', [0 0 0], 'BackgroundColor', [1 1 1], ...
-                'FontName', 'Arial', 'FontSize', 12, 'FontWeight', 'bold', 'FontUnits', 'points', ...
-                'BorderType', 'etchedin', 'HighlightColor', [1 1 1], 'ShadowColor', [1 1 1]);
+            tab1 = util.FlexTab(fig1);
 
             tab1.addTab('gTg', 'Width', 100);
-            tab1.addTab('Tab 2', 'Color', [1 0 0], 'Width', -1);
+            tab1.addTab('Tab 2', 'Width', -1, 'Color', [0.94 0.94 0.94]);
+            tab1.addTab('Hey');
+
+            if nargout > 0
+                tb = tab1;
+            end
         end
     end
 end
