@@ -60,11 +60,26 @@ classdef FlexTab < handle
     
     methods
         function obj = FlexTab(parent, varargin)
-            %UNTITLED Construct an instance of this class
-            %   Detailed explanation goes here
+            %FLEXTAB Create a new FlexTab object
+            %   obj = FlexTab() creates a new FlexTab object in the current figure
+            %   obj = FlexTab(parent) creates a new FlexTab object in the specified parent object
+            %   obj = FlexTab(parent, 'PropertyName', 'PropertyValue', ...) creates a new FlexTab object with the specified properties
+            %
+            % Inputs:
+            %   parent      - Parent object
+            %   varargin    - Property name-value pairs
+            %
+            % Outputs:
+            %   obj         - FlexTab object
 
             % If first arg is not a graphics element attempt to use the current object or create a new figure
-            if nargin > 0 && ~isa(parent, 'matlab.graphics.Graphics')
+            if nargin == 0
+                parent = gco;
+
+                if isempty(parent)
+                    parent = figure();
+                end
+            elseif nargin > 0 && ~isa(parent, 'matlab.graphics.Graphics')
                 varargin = [parent, varargin];
 
                 parent = gco;
@@ -585,7 +600,7 @@ classdef FlexTab < handle
 
             fig1 = figure();
 
-            tab1 = util.FlexTab(fig1);
+            tab1 = util.FlexTab(fig1, 'FontSize', 10);
 
             tab1.addTab('gTg', 'Width', 100);
             tab1.addTab('Tab 2', 'Width', -1, 'Color', [0.94 0.94 0.94]);
