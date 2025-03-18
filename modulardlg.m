@@ -80,7 +80,7 @@ classdef modulardlg < handle
             % Input:
             %   dlg     - modulardlg object
             %
-            % Return:
+            % Outputs:
             %   answer  - Structure with the user input values
             %   button  - String of the button pressed when closing the dialog
 
@@ -106,7 +106,7 @@ classdef modulardlg < handle
             %   dlg     - modulardlg object
             %   txt     - Text displayed inside the button
             %   varName - Name of the variable where the state of the button will be stored
-            % Return:
+            % Outputs:
             %   outId   - Element ID
             id = dlg.registerElement('Button', varargin{:});
             hdle = uicontrol(...
