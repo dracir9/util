@@ -105,6 +105,7 @@ classdef FlexTab < handle
             p.addParameter('ShadowColor', obj.ShadowColor_, @(x)validateattributes(x, {'numeric'}, ...
                 {'nonnegative', 'ncols', 3, 'nrows', 1, 'ndims', 2, 'real', 'finite', '<=', 1})); % border shadow color [RGB]
             p.addParameter('TabHeight', obj.TabHeight_, @(x)validateattributes(x, {'numeric'}, {'scalar', 'real', '>=', -1, 'finite'})); % tab height
+            p.addParameter('SelectionChangedFcn', ''); % selection change callback
 
             % Parse name-value pairs
             p.parse(varargin{:});
@@ -120,6 +121,7 @@ classdef FlexTab < handle
             obj.HighlightColor_ = p.Results.HighlightColor;
             obj.ShadowColor_ = p.Results.ShadowColor;
             obj.TabHeight_ = p.Results.TabHeight;
+            obj.SelectionChangedFcn = p.Results.SelectionChangedFcn;
 
             try
                 obj.mainPanel_ = uipanel('Parent', parent, 'BorderType', obj.BorderType_, ...
@@ -573,6 +575,9 @@ classdef FlexTab < handle
                 end
             end
 
+            eventData.OldSelection = obj.Selection_;
+            eventData.NewSelection = idx;
+
             % Set selection
             obj.Selection_ = idx;
 
@@ -583,11 +588,11 @@ classdef FlexTab < handle
             if ischar(callback) && isequal(callback, '')
                 % do nothing
             elseif ischar(callback)
-                feval(callback, source, eventData)
+                feval(callback, obj, eventData)
             elseif isa(callback, 'function_handle')
-                callback(source, eventData)
+                callback(obj, eventData)
             elseif iscell(callback)
-                feval(callback{1}, source, eventData, callback{2:end})
+                feval(callback{1}, obj, eventData, callback{2:end})
             end
         end
     end
